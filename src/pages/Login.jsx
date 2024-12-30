@@ -1,121 +1,89 @@
+import React, { useState } from 'react';
 import {
     Box,
     Button,
+    Container,
     FormControl,
     FormLabel,
     Input,
-    Stack,
-    Text,
-    useToast,
     VStack,
-} from '@chakra-ui/react'
-import { useForm } from 'react-hook-form'
-import { Link, useNavigate } from 'react-router-dom'
-import useAuthStore from '../store/authStore'
+    Heading,
+    useToast,
+} from '@chakra-ui/react';
+import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 
 const Login = () => {
-    const {
-        register,
-        handleSubmit,
-        formState: { errors, isSubmitting },
-    } = useForm()
-    const navigate = useNavigate()
-    const toast = useToast()
-    const setAuth = useAuthStore((state) => state.setAuth)
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const navigate = useNavigate();
+    const toast = useToast();
 
-    const onSubmit = async (data) => {
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setIsLoading(true);
+
         try {
-            const response = await fetch('http://localhost:8000/api/users/login', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data),
-            })
+            const response = await api.post('/auth/login', {
+                username: email,
+                password: password
+            });
 
-            const result = await response.json()
-
-            if (!response.ok) {
-                throw new Error(result.detail || 'Login failed')
+            if (response.data.access_token) {
+                localStorage.setItem('token', response.data.access_token);
+                navigate('/dashboard');
             }
-
-            setAuth(result.access_token, result.user)
-            toast({
-                title: 'Login successful',
-                status: 'success',
-                duration: 3000,
-            })
-            navigate('/')
         } catch (error) {
             toast({
-                title: 'Login failed',
-                description: error.message,
+                title: 'Error',
+                description: error.response?.data?.detail || 'Failed to login',
                 status: 'error',
-                duration: 3000,
-            })
+                duration: 5000,
+                isClosable: true,
+            });
+        } finally {
+            setIsLoading(false);
         }
-    }
+    };
 
     return (
-        <Box maxW="md" mx="auto" mt={8}>
-            <VStack spacing={8} align="stretch">
-                <Text fontSize="2xl" fontWeight="bold" textAlign="center">
-                    Login to Your Account
-                </Text>
-
-                <form onSubmit={handleSubmit(onSubmit)}>
-                    <Stack spacing={4}>
-                        <FormControl isInvalid={errors.email}>
-                            <FormLabel>Email</FormLabel>
-                            <Input
-                                type="email"
-                                {...register('email', {
-                                    required: 'Email is required',
-                                    pattern: {
-                                        value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                                        message: 'Invalid email address',
-                                    },
-                                })}
-                            />
-                        </FormControl>
-
-                        <FormControl isInvalid={errors.password}>
-                            <FormLabel>Password</FormLabel>
-                            <Input
-                                type="password"
-                                {...register('password', {
-                                    required: 'Password is required',
-                                    minLength: {
-                                        value: 6,
-                                        message: 'Password must be at least 6 characters',
-                                    },
-                                })}
-                            />
-                        </FormControl>
-
-                        <Button
-                            type="submit"
-                            colorScheme="brand"
-                            size="lg"
-                            fontSize="md"
-                            isLoading={isSubmitting}
-                        >
-                            Sign in
-                        </Button>
-                    </Stack>
-                </form>
-
-                <Text textAlign="center">
-                    Don't have an account?{' '}
-                    <Link to="/register">
-                        <Text as="span" color="brand.500">
-                            Register here
-                        </Text>
-                    </Link>
-                </Text>
+        <Container maxW="container.sm" py={8}>
+            <VStack spacing={8}>
+                <Heading>Login</Heading>
+                <Box w="100%" p={8} borderWidth={1} borderRadius="lg">
+                    <form onSubmit={handleSubmit}>
+                        <VStack spacing={4}>
+                            <FormControl isRequired>
+                                <FormLabel>Email</FormLabel>
+                                <Input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                />
+                            </FormControl>
+                            <FormControl isRequired>
+                                <FormLabel>Password</FormLabel>
+                                <Input
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                />
+                            </FormControl>
+                            <Button
+                                type="submit"
+                                colorScheme="blue"
+                                width="100%"
+                                isLoading={isLoading}
+                            >
+                                Login
+                            </Button>
+                        </VStack>
+                    </form>
+                </Box>
             </VStack>
-        </Box>
-    )
-}
+        </Container>
+    );
+};
 
-export default Login 
+export default Login; 

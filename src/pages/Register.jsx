@@ -25,12 +25,14 @@ const Register = () => {
 
     const onSubmit = async (data) => {
         try {
-            const response = await fetch('http://localhost:8000/api/users/register', {
+            // Convert the data to FormData as required by FastAPI's OAuth2PasswordRequestForm
+            const formData = new FormData()
+            formData.append('username', data.email)
+            formData.append('password', data.password)
+
+            const response = await fetch('http://localhost:8000/auth/register', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data),
+                body: formData,
             })
 
             const result = await response.json()
@@ -80,26 +82,6 @@ const Register = () => {
                             <FormErrorMessage>{errors.email?.message}</FormErrorMessage>
                         </FormControl>
 
-                        <FormControl isInvalid={errors.first_name}>
-                            <FormLabel>First Name</FormLabel>
-                            <Input
-                                {...register('first_name', {
-                                    required: 'First name is required',
-                                })}
-                            />
-                            <FormErrorMessage>{errors.first_name?.message}</FormErrorMessage>
-                        </FormControl>
-
-                        <FormControl isInvalid={errors.last_name}>
-                            <FormLabel>Last Name</FormLabel>
-                            <Input
-                                {...register('last_name', {
-                                    required: 'Last name is required',
-                                })}
-                            />
-                            <FormErrorMessage>{errors.last_name?.message}</FormErrorMessage>
-                        </FormControl>
-
                         <FormControl isInvalid={errors.password}>
                             <FormLabel>Password</FormLabel>
                             <Input
@@ -113,6 +95,22 @@ const Register = () => {
                                 })}
                             />
                             <FormErrorMessage>{errors.password?.message}</FormErrorMessage>
+                        </FormControl>
+
+                        <FormControl isInvalid={errors.confirmPassword}>
+                            <FormLabel>Confirm Password</FormLabel>
+                            <Input
+                                type="password"
+                                {...register('confirmPassword', {
+                                    required: 'Please confirm your password',
+                                    validate: (val) => {
+                                        if (watch('password') != val) {
+                                            return 'Passwords do not match'
+                                        }
+                                    },
+                                })}
+                            />
+                            <FormErrorMessage>{errors.confirmPassword?.message}</FormErrorMessage>
                         </FormControl>
 
                         <Button

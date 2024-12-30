@@ -1,20 +1,43 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
 
-const useAuthStore = create(
-    persist(
-        (set) => ({
+// Get initial state from localStorage
+const getInitialState = () => {
+    const token = localStorage.getItem('token')
+    const userStr = localStorage.getItem('user')
+    const user = userStr ? JSON.parse(userStr) : null
+    return {
+        isAuthenticated: !!token,
+        token,
+        user,
+    }
+}
+
+const useAuthStore = create((set) => ({
+    ...getInitialState(),
+
+    setAuth: (token, user) => {
+        // Save to localStorage
+        localStorage.setItem('token', token)
+        localStorage.setItem('user', JSON.stringify(user))
+
+        set({
+            isAuthenticated: true,
+            token,
+            user,
+        })
+    },
+
+    clearAuth: () => {
+        // Clear localStorage
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+
+        set({
+            isAuthenticated: false,
             token: null,
             user: null,
-            isAuthenticated: false,
-            setAuth: (token, user) => set({ token, user, isAuthenticated: true }),
-            logout: () => set({ token: null, user: null, isAuthenticated: false }),
-            updateUser: (user) => set({ user }),
-        }),
-        {
-            name: 'auth-storage',
-        }
-    )
-)
+        })
+    },
+}))
 
-export default useAuthStore 
+export { useAuthStore } 
