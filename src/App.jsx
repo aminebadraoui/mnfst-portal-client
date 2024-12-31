@@ -3,7 +3,8 @@ import { ChakraProvider, extendTheme } from '@chakra-ui/react'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
-import MarketingAngleFinder from './pages/MarketingAngleFinder'
+import MarketingResearchAgent from './pages/MarketingResearchAgent'
+import MarketingResearchWorkflows from './pages/MarketingResearchWorkflows'
 import { useAuthStore } from './store/authStore'
 import Navbar from './components/Navbar'
 
@@ -66,10 +67,18 @@ const App = () => {
           }
         />
         <Route
-          path="/marketing-angle-finder"
+          path="/marketing-research"
           element={
             <PrivateRoute>
-              <MarketingAngleFinder />
+              <MarketingResearchWorkflows />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/marketing-research/analyze"
+          element={
+            <PrivateRoute>
+              <MarketingResearchAgent />
             </PrivateRoute>
           }
         />

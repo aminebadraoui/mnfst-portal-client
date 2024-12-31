@@ -69,10 +69,10 @@ const AgentCard = ({ title, description, icon, to, isComingSoon = false }) => {
 const Dashboard = () => {
     const agents = [
         {
-            title: 'Marketing Angle Finder',
-            description: 'Analyze websites and conversations to uncover marketing opportunities, pain points, and business ideas.',
+            title: 'Marketing Research Agent',
+            description: 'Analyze websites and conversations to uncover marketing opportunities, customer insights, and business ideas.',
             icon: FaSearchDollar,
-            to: '/marketing-angle-finder',
+            to: '/marketing-research',
         },
         {
             title: 'Market Trend Analyzer',

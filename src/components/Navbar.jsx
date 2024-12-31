@@ -264,9 +264,9 @@ const NAV_ITEMS = [
         label: 'AI Tools',
         children: [
             {
-                label: 'Marketing Angle Finder',
-                subLabel: 'Discover marketing opportunities and business ideas',
-                href: '/marketing-angle-finder',
+                label: 'Marketing Research Agent',
+                subLabel: 'Research and analyze market opportunities',
+                href: '/marketing-research',
             },
             {
                 label: 'Market Trend Analyzer',
