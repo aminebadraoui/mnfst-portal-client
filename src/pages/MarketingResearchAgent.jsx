@@ -311,6 +311,7 @@ const MarketingResearchAgent = () => {
                 processedUrls: 0,
                 totalUrls: collectedUrls.length
             });
+            setInsights([]); // Clear previous insights at the start
 
             const response = await fetch(`${api.defaults.baseURL}/analysis/analyze`, {
                 method: 'POST',
@@ -323,7 +324,8 @@ const MarketingResearchAgent = () => {
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
-            const keywordMap = new Map(); // Track keyword counts and sources
+            const keywordMap = new Map();
+            let processedUrlsSet = new Set();
 
             while (true) {
                 const { value, done } = await reader.read();
@@ -358,10 +360,12 @@ const MarketingResearchAgent = () => {
                             }
                         }
 
+                        // Add new insights and quotes
                         setInsights(prev => [
-                            ...prev,
+                            ...prev.filter(i => i.type !== 'keyword'), // Keep non-keyword insights
                             { type: 'insight', content: insight.key_insight, source },
                             { type: 'quote', content: insight.key_quote, source },
+                            // Add updated keywords
                             ...Array.from(keywordMap.values()).map(k => ({
                                 type: 'keyword',
                                 content: k.content,
@@ -370,10 +374,14 @@ const MarketingResearchAgent = () => {
                             }))
                         ]);
 
-                        setProcessingStatus(prev => ({
-                            ...prev,
-                            processedUrls: prev.processedUrls + 1
-                        }));
+                        // Only update processedUrls count for new URLs
+                        if (!processedUrlsSet.has(source)) {
+                            processedUrlsSet.add(source);
+                            setProcessingStatus(prev => ({
+                                ...prev,
+                                processedUrls: processedUrlsSet.size
+                            }));
+                        }
                     } else if (eventData.type === 'error') {
                         toast({
                             title: 'Analysis Error',
