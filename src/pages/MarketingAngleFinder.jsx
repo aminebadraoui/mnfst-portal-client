@@ -19,17 +19,20 @@ import {
     useToast,
     Badge,
     SimpleGrid,
+    FormHelperText,
+    Link,
+    Progress,
 } from '@chakra-ui/react';
-import { FaPlus, FaTrash, FaKeyboard, FaLightbulb, FaQuoteRight } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaKeyboard, FaLightbulb, FaQuoteRight, FaReddit } from 'react-icons/fa';
 import api from '../services/api';
 
-const InsightBox = ({ title, icon, insights = [], count }) => (
-    <Card h="full" variant="outline" boxShadow="sm">
-        <CardHeader bg="blue.50" p={4} borderBottomWidth="1px">
+const InsightBox = ({ title, icon, insights = [], count, brandColor }) => (
+    <Card h="full" variant="outline" boxShadow="sm" borderColor={brandColor}>
+        <CardHeader bg={`${brandColor}10`} p={4} borderBottomWidth="1px">
             <VStack spacing={2}>
-                <Icon as={icon} boxSize={6} color="blue.500" />
-                <Heading size="md" textAlign="center">{title}</Heading>
-                <Badge colorScheme="blue" fontSize="sm" px={2} borderRadius="full">
+                <Icon as={icon} boxSize={6} color={brandColor} />
+                <Heading size="md" textAlign="center" color={brandColor}>{title}</Heading>
+                <Badge bg={brandColor} color="white" fontSize="sm" px={2} borderRadius="full">
                     {count} FOUND
                 </Badge>
             </VStack>
@@ -46,7 +49,7 @@ const InsightBox = ({ title, icon, insights = [], count }) => (
                         _hover={{
                             transform: 'translateY(-2px)',
                             boxShadow: 'md',
-                            borderColor: 'blue.200'
+                            borderColor: brandColor
                         }}
                         transition="all 0.2s"
                     >
@@ -56,12 +59,12 @@ const InsightBox = ({ title, icon, insights = [], count }) => (
                                     <Text
                                         fontSize="md"
                                         fontWeight="semibold"
-                                        color="blue.600"
+                                        color={brandColor}
                                     >
                                         {insight.value}
                                     </Text>
                                     {insight.count > 1 && (
-                                        <Badge colorScheme="blue" fontSize="xs">
+                                        <Badge bg={brandColor} color="white" fontSize="xs">
                                             {insight.count}×
                                         </Badge>
                                     )}
@@ -112,10 +115,19 @@ const InsightBox = ({ title, icon, insights = [], count }) => (
 );
 
 const MarketingAngleFinder = () => {
-    const [urls, setUrls] = useState(['']);
+    const [keywords, setKeywords] = useState("");
+    const [urls, setUrls] = useState([""]);
+    const [redditUrls, setRedditUrls] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [insights, setInsights] = useState([]);
     const toast = useToast();
+    const [processingStatus, setProcessingStatus] = useState({
+        isProcessing: false,
+        totalUrls: 0,
+        processedUrls: 0,
+        currentUrl: '',
+        message: ''
+    });
 
     const cleanupText = (text) => {
         // Return empty string for default/error messages
@@ -181,19 +193,91 @@ const MarketingAngleFinder = () => {
         setUrls(newUrls);
     };
 
-    const handleAnalyze = async () => {
+    const handleSearch = async () => {
+        setIsLoading(true);
+        setProcessingStatus({
+            isProcessing: true,
+            totalUrls: 0,
+            processedUrls: 0,
+            currentUrl: '',
+            message: 'Initializing search...'
+        });
         try {
-            setIsLoading(true);
-            setInsights([]);
-            const validUrls = urls.filter(url => url.trim() !== '');
+            let urlsToAnalyze = urls.filter(url => url.trim() !== '');
 
-            if (validUrls.length === 0) {
+            // If keywords are provided, fetch Reddit URLs first
+            if (keywords.trim()) {
+                setProcessingStatus(prev => ({
+                    ...prev,
+                    message: 'Searching Reddit for relevant posts...'
+                }));
+
+                console.log("searching keywords")
+
+                const startResponse = await fetch('https://api.apify.com/v2/acts/trudax~reddit-scraper-lite/run-sync-get-dataset-items?token=apify_api_jFbpFANfkb3NeUWC9JOfbOmMu8KwwJ41lY4L', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        debugMode: false,
+                        includeNSFW: true,
+                        maxComments: 10,
+                        maxCommunitiesCount: 2,
+                        maxItems: 10,
+                        maxPostCount: 10,
+                        maxUserCount: 2,
+                        proxy: {
+                            useApifyProxy: true,
+                            apifyProxyGroups: ["RESIDENTIAL"]
+                        },
+                        scrollTimeout: 40,
+                        searchComments: false,
+                        searchCommunities: false,
+                        searchPosts: true,
+                        searchUsers: false,
+                        searches: [keywords],
+                        skipComments: true,
+                        skipCommunity: true,
+                        skipUserPosts: false,
+                        sort: "relevance",
+                        time: "year"
+                    })
+                });
+                console.log(startResponse);
+
+                const results = await startResponse.json();
+                console.log(results);
+
+                if (Array.isArray(results)) {
+                    const foundUrls = results.map(post => post.url).filter(url => url && url.trim() !== '');
+                    if (foundUrls.length > 0) {
+                        setRedditUrls(foundUrls);
+                        urlsToAnalyze = [...urlsToAnalyze, ...foundUrls];
+                        setProcessingStatus(prev => ({
+                            ...prev,
+                            message: `Found ${foundUrls.length} Reddit posts. Starting analysis...`,
+                            totalUrls: urlsToAnalyze.length
+                        }));
+                    } else {
+                        toast({
+                            title: 'No Results',
+                            description: 'No relevant Reddit posts found for the given keywords',
+                            status: 'info',
+                            duration: 3000,
+                        });
+                    }
+                }
+            }
+
+            if (urlsToAnalyze.length === 0) {
                 toast({
                     title: 'Error',
-                    description: 'Please enter at least one valid URL',
+                    description: 'No URLs to analyze',
                     status: 'error',
                     duration: 3000,
                 });
+                setIsLoading(false);
                 return;
             }
 
@@ -204,7 +288,7 @@ const MarketingAngleFinder = () => {
                     'Content-Type': 'application/json',
                     'Accept': 'text/event-stream',
                 },
-                body: JSON.stringify({ urls: validUrls })
+                body: JSON.stringify({ urls: urlsToAnalyze })
             });
 
             // Create a ReadableStream from the response
@@ -227,17 +311,13 @@ const MarketingAngleFinder = () => {
                     if (line.startsWith('data: ')) {
                         try {
                             const event = JSON.parse(line.slice(6));
-                            console.log('Received event:', event); // Debug log
 
                             switch (event.type) {
                                 case 'status':
-                                    toast({
-                                        title: 'Status',
-                                        description: event.message,
-                                        status: 'info',
-                                        duration: 2000,
-                                        isClosable: true,
-                                    });
+                                    setProcessingStatus(prev => ({
+                                        ...prev,
+                                        message: event.message
+                                    }));
                                     break;
 
                                 case 'chunk_insight':
@@ -255,13 +335,11 @@ const MarketingAngleFinder = () => {
                                     break;
 
                                 case 'url_complete':
-                                    toast({
-                                        title: 'Success',
-                                        description: `Completed analysis of ${event.data.url}`,
-                                        status: 'success',
-                                        duration: 3000,
-                                        isClosable: true,
-                                    });
+                                    setProcessingStatus(prev => ({
+                                        ...prev,
+                                        processedUrls: prev.processedUrls + 1,
+                                        message: `Completed ${prev.processedUrls + 1} of ${prev.totalUrls} URLs`
+                                    }));
                                     break;
                             }
                         } catch (e) {
@@ -271,16 +349,21 @@ const MarketingAngleFinder = () => {
                 }
             }
         } catch (error) {
-            console.error('Analysis error:', error);
+            console.error('Error:', error);
             toast({
                 title: 'Error',
-                description: error.message || 'Failed to analyze URLs',
+                description: error.message,
                 status: 'error',
                 duration: 5000,
                 isClosable: true,
             });
         } finally {
             setIsLoading(false);
+            setProcessingStatus(prev => ({
+                ...prev,
+                isProcessing: false,
+                message: 'Analysis complete!'
+            }));
         }
     };
 
@@ -338,51 +421,149 @@ const MarketingAngleFinder = () => {
     return (
         <Container maxW="container.xl" py={8}>
             <VStack spacing={8} align="stretch">
-                <Box>
-                    <Heading mb={4}>Marketing Angle Finder</Heading>
-                    <Text mb={4}>Enter URLs to analyze for marketing insights</Text>
-
-                    <Stack spacing={4}>
-                        {urls.map((url, index) => (
-                            <HStack key={index}>
-                                <FormControl>
-                                    <Input
-                                        placeholder="Enter URL to analyze"
-                                        value={url}
-                                        onChange={(e) => handleUrlChange(index, e.target.value)}
-                                    />
-                                </FormControl>
-                                {urls.length > 1 && (
-                                    <IconButton
-                                        icon={<FaTrash />}
-                                        onClick={() => handleRemoveUrl(index)}
-                                        colorScheme="red"
-                                        variant="ghost"
+                {processingStatus.isProcessing && (
+                    <Card
+                        bg="white"
+                        borderColor="#a961ff"
+                        borderWidth={2}
+                        borderRadius="lg"
+                        p={4}
+                        position="sticky"
+                        top={4}
+                        zIndex={10}
+                        boxShadow="lg"
+                    >
+                        <HStack spacing={4} align="center">
+                            <Box flex={1}>
+                                <Text fontWeight="bold" color="#a961ff" mb={1}>
+                                    {processingStatus.message}
+                                </Text>
+                                {processingStatus.totalUrls > 0 && (
+                                    <Progress
+                                        value={(processingStatus.processedUrls / processingStatus.totalUrls) * 100}
+                                        size="sm"
+                                        colorScheme="purple"
+                                        borderRadius="full"
+                                        bg="purple.100"
                                     />
                                 )}
-                            </HStack>
-                        ))}
+                            </Box>
+                            {processingStatus.totalUrls > 0 && (
+                                <Badge
+                                    colorScheme="purple"
+                                    fontSize="sm"
+                                    px={3}
+                                    py={1}
+                                    borderRadius="full"
+                                >
+                                    {processingStatus.processedUrls} / {processingStatus.totalUrls}
+                                </Badge>
+                            )}
+                        </HStack>
+                    </Card>
+                )}
+
+                <Box>
+                    <Heading mb={4} color="#a961ff">Marketing Angle Finder</Heading>
+                    <Text mb={6}>Enter keywords to find relevant Reddit posts or directly input URLs to analyze</Text>
+
+                    <Stack spacing={6}>
+                        <Card p={4} variant="outline" borderColor="blue.200">
+                            <FormControl>
+                                <FormLabel fontSize="lg" color="blue.600">
+                                    <HStack>
+                                        <Icon as={FaKeyboard} />
+                                        <Text>Keywords Search</Text>
+                                    </HStack>
+                                </FormLabel>
+                                <Input
+                                    size="lg"
+                                    placeholder="Enter keywords (e.g., 'joint pain', 'back pain')"
+                                    value={keywords}
+                                    onChange={(e) => setKeywords(e.target.value)}
+                                    borderColor="blue.200"
+                                    _hover={{ borderColor: "blue.300" }}
+                                    _focus={{ borderColor: "blue.400", boxShadow: "0 0 0 1px blue.400" }}
+                                />
+                                <FormHelperText>
+                                    Enter keywords to automatically find and analyze relevant Reddit posts
+                                </FormHelperText>
+                            </FormControl>
+                        </Card>
+
+                        <Card p={4} variant="outline">
+                            <FormLabel fontSize="lg">Manual URL Input</FormLabel>
+                            <Stack spacing={4}>
+                                {urls.map((url, index) => (
+                                    <HStack key={index}>
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Enter URL to analyze"
+                                                value={url}
+                                                onChange={(e) => handleUrlChange(index, e.target.value)}
+                                            />
+                                        </FormControl>
+                                        {urls.length > 1 && (
+                                            <IconButton
+                                                icon={<FaTrash />}
+                                                onClick={() => handleRemoveUrl(index)}
+                                                colorScheme="red"
+                                                variant="ghost"
+                                            />
+                                        )}
+                                    </HStack>
+                                ))}
+                                <Button
+                                    leftIcon={<FaPlus />}
+                                    onClick={handleAddUrl}
+                                    variant="ghost"
+                                    size="sm"
+                                >
+                                    Add Another URL
+                                </Button>
+                            </Stack>
+                        </Card>
+
+                        {redditUrls.length > 0 && (
+                            <Card p={4} variant="outline" borderColor="green.200">
+                                <FormLabel fontSize="lg" color="green.600">
+                                    <HStack>
+                                        <Icon as={FaReddit} />
+                                        <Text>Reddit Search Results</Text>
+                                        <Badge colorScheme="green">{redditUrls.length} posts found</Badge>
+                                    </HStack>
+                                </FormLabel>
+                                <Stack spacing={2}>
+                                    {redditUrls.map((url, index) => (
+                                        <Box
+                                            key={index}
+                                            p={2}
+                                            borderWidth="1px"
+                                            borderRadius="md"
+                                            fontSize="sm"
+                                        >
+                                            <Link href={url} isExternal color="blue.500">
+                                                {url}
+                                            </Link>
+                                        </Box>
+                                    ))}
+                                </Stack>
+                            </Card>
+                        )}
 
                         <Button
-                            leftIcon={<FaPlus />}
-                            onClick={handleAddUrl}
-                            variant="ghost"
-                            size="sm"
+                            bg="#a961ff"
+                            color="white"
+                            _hover={{ bg: '#8f4ee6' }}
+                            onClick={handleSearch}
+                            isLoading={isLoading}
+                            loadingText="Analyzing..."
+                            size="lg"
+                            width="full"
                         >
-                            Add Another URL
+                            {keywords.trim() ? 'Search Reddit & Analyze' : 'Analyze URLs'}
                         </Button>
                     </Stack>
-
-                    <Button
-                        mt={4}
-                        colorScheme="blue"
-                        onClick={handleAnalyze}
-                        isLoading={isLoading}
-                        loadingText="Analyzing..."
-                        width="full"
-                    >
-                        Analyze
-                    </Button>
                 </Box>
 
                 {insights.length > 0 && (
@@ -396,18 +577,21 @@ const MarketingAngleFinder = () => {
                             icon={FaKeyboard}
                             insights={groupInsightsByType(insights).keywords}
                             count={groupInsightsByType(insights).keywords.length}
+                            brandColor="#a961ff"
                         />
                         <InsightBox
                             title="Key Insights"
                             icon={FaLightbulb}
                             insights={groupInsightsByType(insights).insights}
                             count={groupInsightsByType(insights).insights.length}
+                            brandColor="#a961ff"
                         />
                         <InsightBox
                             title="Key Quotes"
                             icon={FaQuoteRight}
                             insights={groupInsightsByType(insights).quotes}
                             count={groupInsightsByType(insights).quotes.length}
+                            brandColor="#a961ff"
                         />
                     </SimpleGrid>
                 )}
