@@ -22,8 +22,10 @@ import {
     FormHelperText,
     Link,
     Progress,
+    UnorderedList,
+    ListItem,
 } from '@chakra-ui/react';
-import { FaPlus, FaTrash, FaKeyboard, FaLightbulb, FaQuoteRight, FaReddit } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaKeyboard, FaLightbulb, FaQuoteRight, FaReddit, FaChartLine, FaBookmark, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import api from '../services/api';
 
 const InsightBox = ({ title, icon, insights = [], count, brandColor }) => (
@@ -114,12 +116,106 @@ const InsightBox = ({ title, icon, insights = [], count, brandColor }) => (
     </Card>
 );
 
+const MarketOpportunityCard = ({ opportunity }) => (
+    <Box
+        p={6}
+        borderWidth="1px"
+        borderRadius="lg"
+        bg="white"
+        _hover={{
+            transform: 'translateY(-2px)',
+            boxShadow: 'md',
+            borderColor: "#a961ff"
+        }}
+        transition="all 0.2s"
+    >
+        <VStack align="stretch" spacing={4}>
+            <Heading size="md" color="#a961ff" textAlign="center">
+                {opportunity.opportunity}
+            </Heading>
+
+            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6}>
+                <Box
+                    p={4}
+                    bg="#D35400"
+                    borderRadius="lg"
+                    borderWidth="1px"
+                    borderColor="#D35400"
+                    color="white"
+                    _hover={{ transform: 'scale(1.02)', transition: 'all 0.2s', boxShadow: 'lg' }}
+                >
+                    <Text fontWeight="bold" mb={2}>Pain Points</Text>
+                    <UnorderedList spacing={2}>
+                        {opportunity.pain_points.map((point, i) => (
+                            <ListItem key={i}>{point}</ListItem>
+                        ))}
+                    </UnorderedList>
+                </Box>
+
+                <Box
+                    p={4}
+                    bg="#1A5FB4"
+                    borderRadius="lg"
+                    borderWidth="1px"
+                    borderColor="#1A5FB4"
+                    color="white"
+                    _hover={{ transform: 'scale(1.02)', transition: 'all 0.2s', boxShadow: 'lg' }}
+                >
+                    <Text fontWeight="bold" mb={2}>Target Market</Text>
+                    <Text>{opportunity.target_market}</Text>
+                </Box>
+
+                <Box
+                    p={4}
+                    bg="#2B9348"
+                    borderRadius="lg"
+                    borderWidth="1px"
+                    borderColor="#2B9348"
+                    color="white"
+                    _hover={{ transform: 'scale(1.02)', transition: 'all 0.2s', boxShadow: 'lg' }}
+                >
+                    <Text fontWeight="bold" mb={2}>Potential Solutions</Text>
+                    <UnorderedList spacing={2}>
+                        {opportunity.potential_solutions.map((solution, i) => (
+                            <ListItem key={i}>{solution}</ListItem>
+                        ))}
+                    </UnorderedList>
+                </Box>
+
+                <Box
+                    p={4}
+                    bg="#1A202C"
+                    borderRadius="lg"
+                    borderWidth="1px"
+                    borderColor="#1A202C"
+                    color="white"
+                    _hover={{ transform: 'scale(1.02)', transition: 'all 0.2s', boxShadow: 'lg' }}
+                >
+                    <Text fontWeight="bold" mb={2}>Supporting Quotes</Text>
+                    <VStack align="stretch" spacing={2}>
+                        {opportunity.supporting_quotes.map((quote, i) => (
+                            <Text
+                                key={i}
+                                fontStyle="italic"
+                            >
+                                "{quote}"
+                            </Text>
+                        ))}
+                    </VStack>
+                </Box>
+            </SimpleGrid>
+        </VStack>
+    </Box>
+);
+
 const MarketingAngleFinder = () => {
     const [keywords, setKeywords] = useState("");
     const [urls, setUrls] = useState([""]);
     const [redditUrls, setRedditUrls] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [insights, setInsights] = useState([]);
+    const [currentOpportunityIndex, setCurrentOpportunityIndex] = useState(0);
+    const [savedOpportunities, setSavedOpportunities] = useState([]);
     const toast = useToast();
     const [processingStatus, setProcessingStatus] = useState({
         isProcessing: false,
@@ -128,6 +224,37 @@ const MarketingAngleFinder = () => {
         currentUrl: '',
         message: ''
     });
+    const [marketOpportunities, setMarketOpportunities] = useState([]);
+    const [isAnalyzingMarket, setIsAnalyzingMarket] = useState(false);
+
+    const handleNextOpportunity = () => {
+        setCurrentOpportunityIndex((prev) =>
+            prev < marketOpportunities.length - 1 ? prev + 1 : prev
+        );
+    };
+
+    const handlePreviousOpportunity = () => {
+        setCurrentOpportunityIndex((prev) => prev > 0 ? prev - 1 : prev);
+    };
+
+    const handleCreateAngle = (opportunity) => {
+        toast({
+            title: 'Coming Soon',
+            description: 'This feature will be available soon!',
+            status: 'info',
+            duration: 3000,
+        });
+    };
+
+    const handleSaveForLater = (opportunity) => {
+        setSavedOpportunities((prev) => [...prev, opportunity]);
+        toast({
+            title: 'Saved!',
+            description: 'Opportunity saved for later.',
+            status: 'success',
+            duration: 3000,
+        });
+    };
 
     const cleanupText = (text) => {
         // Return empty string for default/error messages
@@ -156,7 +283,7 @@ const MarketingAngleFinder = () => {
         const keywordMap = new Map();
 
         insight.value
-            .split(/[,"]|\s+and\s+/)
+            .split(/[,"]|\s+and\s+|"|\s*\+\s*/)
             .map(k => k.trim())
             .filter(k => k.length > 0)
             .forEach(keyword => {
@@ -212,8 +339,6 @@ const MarketingAngleFinder = () => {
                     message: 'Searching Reddit for relevant posts...'
                 }));
 
-                console.log("searching keywords")
-
                 const startResponse = await fetch('https://api.apify.com/v2/acts/trudax~reddit-scraper-lite/run-sync-get-dataset-items?token=apify_api_jFbpFANfkb3NeUWC9JOfbOmMu8KwwJ41lY4L', {
                     method: 'POST',
                     headers: {
@@ -244,10 +369,8 @@ const MarketingAngleFinder = () => {
                         time: "year"
                     })
                 });
-                console.log(startResponse);
 
                 const results = await startResponse.json();
-                console.log(results);
 
                 if (Array.isArray(results)) {
                     const foundUrls = results.map(post => post.url).filter(url => url && url.trim() !== '');
@@ -310,8 +433,7 @@ const MarketingAngleFinder = () => {
                 for (const line of lines) {
                     if (line.startsWith('data: ')) {
                         try {
-                            const event = JSON.parse(line.slice(6));
-
+                            const event = JSON.parse(line.substring(5));
                             switch (event.type) {
                                 case 'status':
                                     setProcessingStatus(prev => ({
@@ -416,6 +538,46 @@ const MarketingAngleFinder = () => {
                 .map(i => ({ ...i, value: cleanupText(i.key_quote) }))
                 .filter(i => i.value) // Filter out empty quotes
         };
+    };
+
+    const handleMarketAnalysis = async () => {
+        setIsAnalyzingMarket(true);
+        try {
+            // Prepare the data
+            const groupedData = groupInsightsByType(insights);
+            const analysisData = {
+                keywords: groupedData.keywords.map(k => k.value),
+                insights: groupedData.insights.map(i => i.value),
+                quotes: groupedData.quotes.map(q => q.value)
+            };
+
+            // Send to backend
+            const response = await fetch(`${api.defaults.baseURL}/analysis/analyze/market-opportunities`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(analysisData)
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to analyze market opportunities');
+            }
+
+            const result = await response.json();
+            setMarketOpportunities(result.opportunities);
+        } catch (error) {
+            console.error('Error:', error);
+            toast({
+                title: 'Error',
+                description: error.message,
+                status: 'error',
+                duration: 5000,
+                isClosable: true,
+            });
+        } finally {
+            setIsAnalyzingMarket(false);
+        }
     };
 
     return (
@@ -567,33 +729,117 @@ const MarketingAngleFinder = () => {
                 </Box>
 
                 {insights.length > 0 && (
-                    <SimpleGrid
-                        columns={{ base: 1, lg: 2, xl: 3 }}
-                        spacing={6}
-                        alignItems="stretch"
-                    >
-                        <InsightBox
-                            title="Top Keywords"
-                            icon={FaKeyboard}
-                            insights={groupInsightsByType(insights).keywords}
-                            count={groupInsightsByType(insights).keywords.length}
-                            brandColor="#a961ff"
-                        />
-                        <InsightBox
-                            title="Key Insights"
-                            icon={FaLightbulb}
-                            insights={groupInsightsByType(insights).insights}
-                            count={groupInsightsByType(insights).insights.length}
-                            brandColor="#a961ff"
-                        />
-                        <InsightBox
-                            title="Key Quotes"
-                            icon={FaQuoteRight}
-                            insights={groupInsightsByType(insights).quotes}
-                            count={groupInsightsByType(insights).quotes.length}
-                            brandColor="#a961ff"
-                        />
-                    </SimpleGrid>
+                    <>
+                        <SimpleGrid columns={{ base: 1, lg: 2, xl: 3 }} spacing={6} alignItems="stretch">
+                            <InsightBox
+                                title="Top Keywords"
+                                icon={FaKeyboard}
+                                insights={groupInsightsByType(insights).keywords}
+                                count={groupInsightsByType(insights).keywords.length}
+                                brandColor="#a961ff"
+                            />
+                            <InsightBox
+                                title="Key Insights"
+                                icon={FaLightbulb}
+                                insights={groupInsightsByType(insights).insights}
+                                count={groupInsightsByType(insights).insights.length}
+                                brandColor="#a961ff"
+                            />
+                            <InsightBox
+                                title="Key Quotes"
+                                icon={FaQuoteRight}
+                                insights={groupInsightsByType(insights).quotes}
+                                count={groupInsightsByType(insights).quotes.length}
+                                brandColor="#a961ff"
+                            />
+                        </SimpleGrid>
+
+                        <Button
+                            leftIcon={<FaChartLine />}
+                            bg="#a961ff"
+                            color="white"
+                            _hover={{ bg: '#8f4ee6' }}
+                            onClick={handleMarketAnalysis}
+                            isLoading={isAnalyzingMarket}
+                            loadingText="Analyzing Market Opportunities..."
+                            size="lg"
+                            width="full"
+                            mt={4}
+                        >
+                            Analyze Market Opportunities
+                        </Button>
+
+                        {marketOpportunities.length > 0 && (
+                            <Card>
+                                <CardHeader bg="#a961ff10" p={4} borderBottomWidth="1px">
+                                    <VStack spacing={2}>
+                                        <Icon as={FaChartLine} boxSize={6} color="#a961ff" />
+                                        <Heading size="md" textAlign="center" color="#a961ff">Market Opportunities</Heading>
+                                        <Badge bg="#a961ff" color="white" fontSize="sm" px={2} borderRadius="full">
+                                            {marketOpportunities.length} FOUND
+                                        </Badge>
+                                    </VStack>
+                                </CardHeader>
+                                <CardBody p={4}>
+                                    <HStack spacing={4} align="center">
+                                        <IconButton
+                                            icon={<FaChevronLeft />}
+                                            onClick={handlePreviousOpportunity}
+                                            isDisabled={currentOpportunityIndex === 0}
+                                            colorScheme="purple"
+                                            variant="ghost"
+                                            size="lg"
+                                        />
+                                        <Box flex={1}>
+                                            <VStack spacing={4}>
+                                                <HStack justify="center" spacing={2} mb={2}>
+                                                    {marketOpportunities.map((_, idx) => (
+                                                        <Box
+                                                            key={idx}
+                                                            w="8px"
+                                                            h="8px"
+                                                            borderRadius="full"
+                                                            bg={idx === currentOpportunityIndex ? "#a961ff" : "gray.200"}
+                                                        />
+                                                    ))}
+                                                </HStack>
+
+                                                <MarketOpportunityCard opportunity={marketOpportunities[currentOpportunityIndex]} />
+
+                                                <HStack spacing={4} mt={4}>
+                                                    <Button
+                                                        leftIcon={<FaLightbulb />}
+                                                        colorScheme="purple"
+                                                        onClick={() => handleCreateAngle(marketOpportunities[currentOpportunityIndex])}
+                                                        size="lg"
+                                                    >
+                                                        Create Angle for Opportunity
+                                                    </Button>
+                                                    <Button
+                                                        leftIcon={<FaBookmark />}
+                                                        variant="outline"
+                                                        colorScheme="purple"
+                                                        onClick={() => handleSaveForLater(marketOpportunities[currentOpportunityIndex])}
+                                                        size="lg"
+                                                    >
+                                                        Save for Later
+                                                    </Button>
+                                                </HStack>
+                                            </VStack>
+                                        </Box>
+                                        <IconButton
+                                            icon={<FaChevronRight />}
+                                            onClick={handleNextOpportunity}
+                                            isDisabled={currentOpportunityIndex === marketOpportunities.length - 1}
+                                            colorScheme="purple"
+                                            variant="ghost"
+                                            size="lg"
+                                        />
+                                    </HStack>
+                                </CardBody>
+                            </Card>
+                        )}
+                    </>
                 )}
             </VStack>
         </Container>
