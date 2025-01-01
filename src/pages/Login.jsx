@@ -12,6 +12,7 @@ import {
 } from '@chakra-ui/react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { useAuthStore } from '../store/authStore';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -19,19 +20,26 @@ const Login = () => {
     const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
     const toast = useToast();
+    const setAuth = useAuthStore(state => state.setAuth);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsLoading(true);
 
         try {
-            const response = await api.post('/auth/login', {
-                username: email,
-                password: password
+            // Create URLSearchParams for form data
+            const formData = new URLSearchParams();
+            formData.append('username', email);
+            formData.append('password', password);
+
+            const response = await api.post('/auth/login', formData.toString(), {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
             });
 
             if (response.data.access_token) {
-                localStorage.setItem('token', response.data.access_token);
+                setAuth(response.data.access_token, response.data.user);
                 navigate('/dashboard');
             }
         } catch (error) {

@@ -76,13 +76,14 @@ const MarketingResearchWorkflows = () => {
             title: 'Create New Research',
             description: 'Start a new marketing research analysis to uncover customer insights',
             icon: FaPlus,
-            to: '/marketing-research/analyze',
+            to: '/marketing-research/new',
         },
         {
             title: 'View Past Research',
             description: 'Access and review your previous marketing research analyses',
             icon: FaHistory,
-            isDisabled: true,
+            to: '/marketing-research/list',
+            isDisabled: false,
         },
     ];
 

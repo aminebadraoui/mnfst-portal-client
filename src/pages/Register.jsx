@@ -12,6 +12,8 @@ import {
 } from '@chakra-ui/react'
 import { useForm } from 'react-hook-form'
 import { Link, useNavigate } from 'react-router-dom'
+import api from '../services/api'
+import { useAuthStore } from '../store/authStore'
 
 const Register = () => {
     const {
@@ -22,41 +24,41 @@ const Register = () => {
     } = useForm()
     const navigate = useNavigate()
     const toast = useToast()
+    const setAuth = useAuthStore(state => state.setAuth)
 
     const onSubmit = async (data) => {
         try {
-            // Convert the data to FormData as required by FastAPI's OAuth2PasswordRequestForm
-            const formData = new FormData()
+            // Convert the data to URLSearchParams as required by FastAPI's OAuth2PasswordRequestForm
+            const formData = new URLSearchParams()
             formData.append('username', data.email)
             formData.append('password', data.password)
 
-            const response = await fetch('http://localhost:8000/auth/register', {
-                method: 'POST',
-                body: formData,
-            })
+            const response = await api.post('/auth/register', formData.toString(), {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            });
 
-            const result = await response.json()
-
-            if (!response.ok) {
-                throw new Error(result.detail || 'Registration failed')
+            // If registration is successful, set auth and navigate to dashboard
+            if (response.data.access_token) {
+                setAuth(response.data.access_token, response.data.user);
+                toast({
+                    title: 'Registration successful',
+                    description: 'Welcome to the platform!',
+                    status: 'success',
+                    duration: 3000,
+                });
+                navigate('/dashboard');
             }
-
-            toast({
-                title: 'Registration successful',
-                description: 'Please login with your credentials',
-                status: 'success',
-                duration: 3000,
-            })
-            navigate('/login')
         } catch (error) {
             toast({
                 title: 'Registration failed',
-                description: error.message,
+                description: error.response?.data?.detail || 'An error occurred during registration',
                 status: 'error',
-                duration: 3000,
-            })
+                duration: 5000,
+            });
         }
-    }
+    };
 
     return (
         <Box maxW="md" mx="auto" mt={8}>

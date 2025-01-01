@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Box,
     Button,
@@ -25,8 +25,16 @@ import {
     UnorderedList,
     ListItem,
 } from '@chakra-ui/react';
-import { FaPlus, FaTrash, FaKeyboard, FaLightbulb, FaQuoteRight, FaReddit, FaChartLine, FaBookmark, FaChevronLeft, FaChevronRight, FaAmazon, FaYoutube, FaSearch, FaLink } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaKeyboard, FaLightbulb, FaQuoteRight, FaReddit, FaChartLine, FaBookmark, FaChevronLeft, FaChevronRight, FaAmazon, FaYoutube, FaSearch, FaLink, FaHistory } from 'react-icons/fa';
 import api from '../services/api';
+import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
+import {
+    createResearch,
+    getResearch,
+    updateResearchUrls,
+    saveContentAnalysis,
+    saveMarketAnalysis
+} from '../services/researchService';
 
 const InsightBox = ({ title, icon, insights = [], count, brandColor }) => (
     <Card h="full" variant="outline" boxShadow="sm" borderColor={brandColor}>
@@ -204,6 +212,90 @@ const MarketingResearchAgent = () => {
     const [marketOpportunities, setMarketOpportunities] = useState([]);
     const [currentOpportunityIndex, setCurrentOpportunityIndex] = useState(0);
     const toast = useToast();
+    const [currentResearch, setCurrentResearch] = useState(null);
+    const { researchId } = useParams();
+    const navigate = useNavigate();
+
+    // Load existing research if researchId is provided
+    useEffect(() => {
+        const loadResearch = async () => {
+            if (researchId) {
+                try {
+                    const research = await getResearch(researchId);
+                    setCurrentResearch(research);
+                    // Restore state from research
+                    if (research.urls) setCollectedUrls(research.urls);
+                    if (research.content_analysis?.insights) {
+                        const restoredInsights = [];
+                        research.content_analysis.insights.forEach(insight => {
+                            restoredInsights.push(
+                                { type: 'insight', content: insight.key_insight, source: insight.source },
+                                { type: 'quote', content: insight.key_quote, source: insight.source }
+                            );
+                            // Restore keywords
+                            if (insight.top_keyword) {
+                                restoredInsights.push({
+                                    type: 'keyword',
+                                    content: insight.top_keyword,
+                                    count: 1,
+                                    sources: [insight.source]
+                                });
+                            }
+                        });
+                        setInsights(restoredInsights);
+                    }
+                    if (research.market_analysis?.opportunities) {
+                        setMarketOpportunities(research.market_analysis.opportunities);
+                    }
+                } catch (error) {
+                    toast({
+                        title: 'Error Loading Research',
+                        description: error.message,
+                        status: 'error',
+                        duration: 5000,
+                        isClosable: true,
+                    });
+                }
+            }
+        };
+        loadResearch();
+    }, [researchId]);
+
+    // Initialize new research when starting
+    const initializeResearch = async () => {
+        if (!currentResearch && !researchId) {
+            try {
+                const research = await createResearch();
+                setCurrentResearch(research);
+                navigate(`/marketing-research/${research.id}`);
+            } catch (error) {
+                toast({
+                    title: 'Error Creating Research',
+                    description: error.message,
+                    status: 'error',
+                    duration: 5000,
+                    isClosable: true,
+                });
+            }
+        }
+    };
+
+    // Call initializeResearch when component mounts
+    useEffect(() => {
+        initializeResearch();
+    }, []);
+
+    // Update collected URLs in research
+    const updateResearchWithUrls = async (urls) => {
+        if (currentResearch) {
+            try {
+                const updated = await updateResearchUrls(currentResearch.id, urls);
+                setCurrentResearch(updated);
+            } catch (error) {
+                console.error('Error updating research URLs:', error);
+            }
+        }
+    };
 
     const handleKeywordChange = (index, value) => {
         const newKeywords = [...keywords];
@@ -262,7 +354,12 @@ const MarketingResearchAgent = () => {
                 .filter(item => item.url)
                 .map(item => item.url);
 
-            setCollectedUrls(prev => [...new Set([...prev, ...urls])]);
+            setCollectedUrls(prev => {
+                const newUrls = [...new Set([...prev, ...urls])];
+                // Update research with new URLs
+                updateResearchWithUrls(newUrls);
+                return newUrls;
+            });
             toast({
                 title: 'Search Complete',
                 description: `Found ${urls.length} relevant links`,
@@ -286,7 +383,12 @@ const MarketingResearchAgent = () => {
 
     const handleAddManualUrl = () => {
         if (manualUrl.trim()) {
-            setCollectedUrls(prev => [...new Set([...prev, manualUrl.trim()])]);
+            setCollectedUrls(prev => {
+                const newUrls = [...new Set([...prev, manualUrl.trim()])];
+                // Update research with new URLs
+                updateResearchWithUrls(newUrls);
+                return newUrls;
+            });
             setManualUrl('');
             toast({
                 title: 'URL Added',
@@ -299,7 +401,12 @@ const MarketingResearchAgent = () => {
     };
 
     const handleRemoveUrl = (urlToRemove) => {
-        setCollectedUrls(prev => prev.filter(url => url !== urlToRemove));
+        setCollectedUrls(prev => {
+            const newUrls = prev.filter(url => url !== urlToRemove);
+            // Update research with new URLs
+            updateResearchWithUrls(newUrls);
+            return newUrls;
+        });
     };
 
     const handleAnalyze = async () => {
@@ -326,6 +433,7 @@ const MarketingResearchAgent = () => {
             const decoder = new TextDecoder();
             const keywordMap = new Map();
             let processedUrlsSet = new Set();
+            let contentInsights = []; // Track raw insights for saving
 
             while (true) {
                 const { value, done } = await reader.read();
@@ -348,7 +456,15 @@ const MarketingResearchAgent = () => {
                         const insight = eventData.data;
                         const source = insight.source;
 
-                        // Update keyword map
+                        // Store raw insight for saving to database
+                        contentInsights.push({
+                            source: source,
+                            top_keyword: insight.top_keyword,
+                            key_insight: insight.key_insight,
+                            key_quote: insight.key_quote
+                        });
+
+                        // Update keyword map for UI display
                         const keyword = insight.top_keyword.toLowerCase();
                         if (!keywordMap.has(keyword)) {
                             keywordMap.set(keyword, { content: insight.top_keyword, count: 1, sources: [source] });
@@ -360,7 +476,7 @@ const MarketingResearchAgent = () => {
                             }
                         }
 
-                        // Add new insights and quotes
+                        // Update UI with insights
                         setInsights(prev => [
                             ...prev.filter(i => i.type !== 'keyword'), // Keep non-keyword insights
                             { type: 'insight', content: insight.key_insight, source },
@@ -374,7 +490,7 @@ const MarketingResearchAgent = () => {
                             }))
                         ]);
 
-                        // Only update processedUrls count for new URLs
+                        // Update processed URLs count
                         if (!processedUrlsSet.has(source)) {
                             processedUrlsSet.add(source);
                             setProcessingStatus(prev => ({
@@ -394,9 +510,15 @@ const MarketingResearchAgent = () => {
                 }
             }
 
+            // Save content analysis with properly formatted insights
+            if (researchId && contentInsights.length > 0) {
+                await saveContentAnalysis(researchId, contentInsights);
+            }
+
+            setProcessingStatus(prev => ({ ...prev, isProcessing: false }));
             toast({
                 title: 'Analysis Complete',
-                description: 'Successfully analyzed content',
+                description: `Analyzed ${processedUrlsSet.size} URLs successfully`,
                 status: 'success',
                 duration: 5000,
                 isClosable: true,
@@ -410,9 +532,9 @@ const MarketingResearchAgent = () => {
                 duration: 5000,
                 isClosable: true,
             });
+            setProcessingStatus(prev => ({ ...prev, isProcessing: false }));
         } finally {
             setIsAnalyzing(false);
-            setProcessingStatus(prev => ({ ...prev, isProcessing: false }));
         }
     };
 
@@ -463,6 +585,15 @@ const MarketingResearchAgent = () => {
                 duration: 5000,
                 isClosable: true,
             });
+
+            // After analysis is complete, save opportunities
+            if (researchId && response.data.opportunities) {
+                try {
+                    await saveMarketAnalysis(researchId, response.data.opportunities);
+                } catch (error) {
+                    console.error('Error saving market analysis:', error);
+                }
+            }
         } catch (error) {
             console.error('Market Analysis Error:', {
                 error: error,
@@ -498,6 +629,24 @@ const MarketingResearchAgent = () => {
         <Container maxW="container.xl" py={8}>
             <VStack spacing={8} align="stretch">
                 <Box>
+                    <HStack justify="space-between" align="center" mb={4}>
+                        <Button
+                            leftIcon={<FaChevronLeft />}
+                            variant="ghost"
+                            onClick={() => navigate('/marketing-research')}
+                        >
+                            Back
+                        </Button>
+                        <Button
+                            as={RouterLink}
+                            to="/marketing-research/list"
+                            rightIcon={<FaHistory />}
+                            colorScheme="purple"
+                            variant="outline"
+                        >
+                            View Past Research
+                        </Button>
+                    </HStack>
                     <Heading size="lg" mb={2}>Marketing Research Agent</Heading>
                     <Text color="gray.600">
                         Research and analyze market opportunities by examining websites and online discussions

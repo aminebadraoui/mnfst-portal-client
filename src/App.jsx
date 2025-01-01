@@ -1,96 +1,38 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
-import { ChakraProvider, extendTheme } from '@chakra-ui/react'
-import Login from './pages/Login'
-import Register from './pages/Register'
-import Dashboard from './pages/Dashboard'
-import MarketingResearchAgent from './pages/MarketingResearchAgent'
-import MarketingResearchWorkflows from './pages/MarketingResearchWorkflows'
-import { useAuthStore } from './store/authStore'
-import Navbar from './components/Navbar'
-
-// Extend the theme to include custom colors, fonts, etc
-const theme = extendTheme({
-  colors: {
-    brand: {
-      50: '#f5f0ff',
-      100: '#ead9ff',
-      200: '#d7b8ff',
-      300: '#c194ff',
-      400: '#b375ff',
-      500: '#a961ff',
-      600: '#8746d1',
-      700: '#6830a3',
-      800: '#4a1d75',
-      900: '#2c0d47',
-    },
-  },
-})
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { ChakraProvider } from '@chakra-ui/react';
+import theme from './theme';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Dashboard from './pages/Dashboard';
+import MarketingResearchAgent from './pages/MarketingResearchAgent';
+import MarketingResearchWorkflows from './pages/MarketingResearchWorkflows';
+import ResearchList from './pages/ResearchList';
+import { useAuthStore } from './store/authStore';
+import Navbar from './components/Navbar';
 
 const PrivateRoute = ({ children }) => {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
-  return isAuthenticated ? children : <Navigate to="/login" />
-}
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  return isAuthenticated ? children : <Navigate to="/login" />;
+};
 
-const App = () => {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+function App() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   return (
     <ChakraProvider theme={theme}>
       {isAuthenticated && <Navbar />}
       <Routes>
-        <Route
-          path="/login"
-          element={
-            isAuthenticated ? (
-              <Navigate to="/dashboard" />
-            ) : (
-              <Login />
-            )
-          }
-        />
-        <Route
-          path="/register"
-          element={
-            isAuthenticated ? (
-              <Navigate to="/dashboard" />
-            ) : (
-              <Register />
-            )
-          }
-        />
-        <Route
-          path="/dashboard"
-          element={
-            <PrivateRoute>
-              <Dashboard />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/marketing-research"
-          element={
-            <PrivateRoute>
-              <MarketingResearchWorkflows />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/marketing-research/analyze"
-          element={
-            <PrivateRoute>
-              <MarketingResearchAgent />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/"
-          element={
-            <Navigate to={isAuthenticated ? "/dashboard" : "/login"} />
-          }
-        />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+        <Route path="/marketing-research" element={<PrivateRoute><MarketingResearchWorkflows /></PrivateRoute>} />
+        <Route path="/marketing-research/list" element={<PrivateRoute><ResearchList /></PrivateRoute>} />
+        <Route path="/marketing-research/new" element={<PrivateRoute><MarketingResearchAgent /></PrivateRoute>} />
+        <Route path="/marketing-research/:researchId" element={<PrivateRoute><MarketingResearchAgent /></PrivateRoute>} />
+        <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
       </Routes>
     </ChakraProvider>
-  )
+  );
 }
 
-export default App
+export default App;
