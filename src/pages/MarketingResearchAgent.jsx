@@ -419,22 +419,57 @@ const MarketingResearchAgent = () => {
     const handleMarketAnalysis = async () => {
         try {
             setIsAnalyzingMarket(true);
-            const response = await api.post('/analysis/analyze/market-opportunities', {
-                keywords: keywords,
+
+            const requestData = {
+                keywords: keywords.filter(k => k.trim() !== ''),  // Filter out empty keywords
                 insights: insights.filter(i => i.type === 'insight').map(i => i.content),
-                quotes: insights.filter(i => i.type === 'quote').map(i => i.content)
+                quotes: insights.filter(i => i.type === 'quote').map(i => i.content),
+                keywords_found: insights
+                    .filter(i => i.type === 'keyword')
+                    .map(i => i.content)
+            };
+
+            console.log('Market Analysis Request:', {
+                keywordsCount: requestData.keywords.length,
+                keywordsFoundCount: requestData.keywords_found.length,
+                insightsCount: requestData.insights.length,
+                quotesCount: requestData.quotes.length,
+                keywords: requestData.keywords,
+                keywordsFound: requestData.keywords_found,
+                insights: requestData.insights,
+                quotes: requestData.quotes
+            });
+
+            const response = await api.post('/analysis/analyze/market-opportunities', requestData);
+
+            console.log('Market Analysis Response:', {
+                status: response.status,
+                opportunitiesCount: response.data.opportunities?.length || 0,
+                opportunities: response.data.opportunities
             });
 
             setMarketOpportunities(response.data.opportunities || []);
             setCurrentOpportunityIndex(0);
+
+            console.log('Updated Market Opportunities State:', {
+                totalOpportunities: response.data.opportunities?.length || 0,
+                currentIndex: 0
+            });
+
             toast({
                 title: 'Market Analysis Complete',
-                description: 'Successfully analyzed market opportunities',
+                description: `Found ${response.data.opportunities?.length || 0} market opportunities`,
                 status: 'success',
                 duration: 5000,
                 isClosable: true,
             });
         } catch (error) {
+            console.error('Market Analysis Error:', {
+                error: error,
+                response: error.response?.data,
+                status: error.response?.status
+            });
+
             toast({
                 title: 'Market Analysis Failed',
                 description: error.response?.data?.detail || 'Failed to analyze market opportunities',
