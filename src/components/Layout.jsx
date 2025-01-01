@@ -1,17 +1,15 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
-import { Box } from '@mui/material';
-import Navbar from './Navbar';
-import { useAuthStore } from '../store/authStore';
+import { Box, useColorModeValue } from '@chakra-ui/react';
+import Sidebar from './Sidebar';
 
-const Layout = () => {
-    const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+const Layout = ({ children }) => {
+    const bg = useColorModeValue('gray.50', 'gray.900');
 
     return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-            {isAuthenticated && <Navbar />}
-            <Box component="main" sx={{ flexGrow: 1 }}>
-                <Outlet />
+        <Box minH="100vh" bg={bg}>
+            <Sidebar />
+            <Box ml={{ base: 0, md: '64' }} p="4">
+                {children}
             </Box>
         </Box>
     );

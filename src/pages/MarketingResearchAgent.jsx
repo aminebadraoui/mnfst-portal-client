@@ -35,6 +35,7 @@ import {
     saveContentAnalysis,
     saveMarketAnalysis
 } from '../services/researchService';
+import MarketingResearchLayout from '../components/MarketingResearchLayout';
 
 const InsightBox = ({ title, icon, insights = [], count, brandColor }) => (
     <Card h="full" variant="outline" boxShadow="sm" borderColor={brandColor}>
@@ -625,338 +626,339 @@ const MarketingResearchAgent = () => {
         }
     };
 
-    return (
-        <Container maxW="container.xl" py={8}>
-            <VStack spacing={8} align="stretch">
-                <Box>
-                    <HStack justify="space-between" align="center" mb={4}>
-                        <Button
-                            leftIcon={<FaChevronLeft />}
-                            variant="ghost"
-                            onClick={() => navigate('/marketing-research')}
-                        >
-                            Back
-                        </Button>
-                        <Button
-                            as={RouterLink}
-                            to="/marketing-research/list"
-                            rightIcon={<FaHistory />}
-                            colorScheme="purple"
-                            variant="outline"
-                        >
-                            View Past Research
-                        </Button>
-                    </HStack>
-                    <Heading size="lg" mb={2}>Marketing Research Agent</Heading>
-                    <Text color="gray.600">
-                        Research and analyze market opportunities by examining websites and online discussions
-                    </Text>
-                </Box>
+    // Determine current step based on state
+    const getCurrentStep = () => {
+        if (marketOpportunities.length > 0) {
+            return 3;
+        }
+        if (insights.length > 0) {
+            return 2;
+        }
+        return 1;
+    };
 
-                {processingStatus.isProcessing && (
-                    <Card
-                        bg="white"
-                        borderColor="#a961ff"
-                        borderWidth={2}
-                        borderRadius="lg"
-                        p={4}
-                        position="sticky"
-                        top={4}
-                        zIndex={10}
-                        boxShadow="lg"
-                    >
-                        <HStack spacing={4} align="center">
-                            <Box flex={1}>
-                                <Text fontWeight="bold" color="#a961ff" mb={1}>
-                                    {processingStatus.message}
-                                </Text>
+    return (
+        <MarketingResearchLayout currentStep={getCurrentStep()}>
+            <Container maxW="container.xl">
+                <VStack spacing={8} align="stretch">
+                    <Box>
+                        <Heading size="lg" mb={2}>Marketing Research Agent</Heading>
+                        <Text color="gray.600">
+                            Research and analyze market opportunities by examining websites and online discussions
+                        </Text>
+                    </Box>
+
+                    {processingStatus.isProcessing && (
+                        <Card
+                            bg="white"
+                            borderColor="#a961ff"
+                            borderWidth={2}
+                            borderRadius="lg"
+                            p={4}
+                            position="sticky"
+                            top={4}
+                            zIndex={10}
+                            boxShadow="lg"
+                        >
+                            <HStack spacing={4} align="center">
+                                <Box flex={1}>
+                                    <Text fontWeight="bold" color="#a961ff" mb={1}>
+                                        {processingStatus.message}
+                                    </Text>
+                                    {processingStatus.totalUrls > 0 && (
+                                        <Progress
+                                            value={(processingStatus.processedUrls / processingStatus.totalUrls) * 100}
+                                            size="sm"
+                                            colorScheme="purple"
+                                            borderRadius="full"
+                                            bg="purple.100"
+                                        />
+                                    )}
+                                </Box>
                                 {processingStatus.totalUrls > 0 && (
-                                    <Progress
-                                        value={(processingStatus.processedUrls / processingStatus.totalUrls) * 100}
-                                        size="sm"
+                                    <Badge
                                         colorScheme="purple"
+                                        fontSize="sm"
+                                        px={3}
+                                        py={1}
                                         borderRadius="full"
-                                        bg="purple.100"
+                                    >
+                                        {processingStatus.processedUrls} / {processingStatus.totalUrls}
+                                    </Badge>
+                                )}
+                            </HStack>
+                        </Card>
+                    )}
+
+                    {/* Step 1: Research Setup */}
+                    {getCurrentStep() === 1 && (
+                        <Card>
+                            <CardHeader bg="#a961ff10" p={4} borderBottomWidth="1px">
+                                <VStack spacing={2}>
+                                    <Icon as={FaKeyboard} boxSize={6} color="#a961ff" />
+                                    <Heading size="md" textAlign="center" color="#a961ff">Research Keywords</Heading>
+                                </VStack>
+                            </CardHeader>
+                            <CardBody p={4}>
+                                <VStack spacing={6}>
+                                    <FormControl>
+                                        <FormLabel fontSize="lg">Keywords</FormLabel>
+                                        <FormHelperText mb={2}>Enter keywords to find relevant content</FormHelperText>
+                                        <HStack spacing={4}>
+                                            <Input
+                                                value={keywords[0]}
+                                                onChange={(e) => handleKeywordChange(0, e.target.value)}
+                                                placeholder="Enter keywords (e.g., joint pain, arthritis)"
+                                            />
+                                            <Button
+                                                leftIcon={<FaSearch />}
+                                                onClick={handleSearch}
+                                                isLoading={isSearching}
+                                                loadingText="Searching..."
+                                                colorScheme="purple"
+                                                px={8}
+                                            >
+                                                Get URLs
+                                            </Button>
+                                        </HStack>
+                                    </FormControl>
+
+                                    <FormControl>
+                                        <FormLabel fontSize="lg">Sources</FormLabel>
+                                        <FormHelperText mb={2}>Select sources to search from</FormHelperText>
+                                        <HStack spacing={6} py={2}>
+                                            <HStack>
+                                                <input
+                                                    type="checkbox"
+                                                    id="reddit"
+                                                    checked={sources.reddit}
+                                                    onChange={() => handleSourceChange('reddit')}
+                                                />
+                                                <Icon as={FaReddit} color="#FF4500" />
+                                                <Text>Reddit</Text>
+                                            </HStack>
+                                            <HStack opacity={0.5}>
+                                                <input
+                                                    type="checkbox"
+                                                    id="amazon"
+                                                    checked={sources.amazon}
+                                                    onChange={() => handleSourceChange('amazon')}
+                                                    disabled
+                                                />
+                                                <Icon as={FaAmazon} color="#FF9900" />
+                                                <Text>Amazon (Coming Soon)</Text>
+                                            </HStack>
+                                            <HStack opacity={0.5}>
+                                                <input
+                                                    type="checkbox"
+                                                    id="youtube"
+                                                    checked={sources.youtube}
+                                                    onChange={() => handleSourceChange('youtube')}
+                                                    disabled
+                                                />
+                                                <Icon as={FaYoutube} color="#FF0000" />
+                                                <Text>YouTube (Coming Soon)</Text>
+                                            </HStack>
+                                        </HStack>
+                                    </FormControl>
+
+                                    <FormControl>
+                                        <FormLabel fontSize="lg">Add URLs Manually</FormLabel>
+                                        <FormHelperText mb={2}>Enter specific URLs you want to analyze</FormHelperText>
+                                        <HStack spacing={4}>
+                                            <Input
+                                                value={manualUrl}
+                                                onChange={(e) => setManualUrl(e.target.value)}
+                                                placeholder="Enter a URL"
+                                            />
+                                            <Button
+                                                leftIcon={<FaPlus />}
+                                                onClick={handleAddManualUrl}
+                                                colorScheme="purple"
+                                                px={8}
+                                            >
+                                                Add URL
+                                            </Button>
+                                        </HStack>
+                                    </FormControl>
+
+                                    {collectedUrls.length > 0 ? (
+                                        <Card p={4} variant="outline" borderColor="purple.200">
+                                            <FormLabel fontSize="lg" color="purple.600">
+                                                <HStack>
+                                                    <Icon as={FaLink} />
+                                                    <Text>URLs to Analyze</Text>
+                                                    <Badge colorScheme="purple">{collectedUrls.length} URLs</Badge>
+                                                </HStack>
+                                            </FormLabel>
+                                            <Stack spacing={2}>
+                                                {collectedUrls.map((url, index) => (
+                                                    <HStack
+                                                        key={index}
+                                                        p={2}
+                                                        borderWidth="1px"
+                                                        borderRadius="md"
+                                                        fontSize="sm"
+                                                    >
+                                                        <Link href={url} isExternal color="blue.500" flex={1}>
+                                                            {url}
+                                                        </Link>
+                                                        <IconButton
+                                                            icon={<FaTrash />}
+                                                            onClick={() => handleRemoveUrl(url)}
+                                                            size="sm"
+                                                            colorScheme="red"
+                                                            variant="ghost"
+                                                        />
+                                                    </HStack>
+                                                ))}
+                                            </Stack>
+                                        </Card>
+                                    ) : (
+                                        <EmptyState
+                                            icon={FaLink}
+                                            title="No URLs Added Yet"
+                                            description="Search using keywords or add URLs manually to begin analysis"
+                                        />
+                                    )}
+
+                                    <Button
+                                        leftIcon={<FaLightbulb />}
+                                        onClick={handleAnalyze}
+                                        isLoading={isAnalyzing}
+                                        loadingText="Analyzing Content..."
+                                        colorScheme="purple"
+                                        width="full"
+                                        isDisabled={collectedUrls.length === 0}
+                                    >
+                                        Analyze Content
+                                    </Button>
+                                </VStack>
+                            </CardBody>
+                        </Card>
+                    )}
+
+                    {/* Step 2: Content Analysis */}
+                    {getCurrentStep() === 2 && (
+                        <Card>
+                            <CardHeader bg="#a961ff10" p={4} borderBottomWidth="1px">
+                                <VStack spacing={2}>
+                                    <Icon as={FaLightbulb} boxSize={6} color="#a961ff" />
+                                    <Heading size="md" textAlign="center" color="#a961ff">Content Analysis</Heading>
+                                </VStack>
+                            </CardHeader>
+                            <CardBody p={4}>
+                                {insights.length > 0 ? (
+                                    <SimpleGrid columns={{ base: 1, lg: 3 }} spacing={6}>
+                                        <InsightBox
+                                            title="Key Insights"
+                                            icon={FaLightbulb}
+                                            insights={insights.filter(i => i.type === 'insight')}
+                                            count={insights.filter(i => i.type === 'insight').length}
+                                            brandColor="#2ECC71"
+                                        />
+                                        <InsightBox
+                                            title="Notable Quotes"
+                                            icon={FaQuoteRight}
+                                            insights={insights.filter(i => i.type === 'quote')}
+                                            count={insights.filter(i => i.type === 'quote').length}
+                                            brandColor="#E74C3C"
+                                        />
+                                        <InsightBox
+                                            title="Keywords Found"
+                                            icon={FaBookmark}
+                                            insights={insights.filter(i => i.type === 'keyword')}
+                                            count={insights.filter(i => i.type === 'keyword').length}
+                                            brandColor="#3498DB"
+                                        />
+                                    </SimpleGrid>
+                                ) : (
+                                    <EmptyState
+                                        icon={FaLightbulb}
+                                        title="No Content Analysis Yet"
+                                        description="Add URLs and analyze content to see insights here"
                                     />
                                 )}
-                            </Box>
-                            {processingStatus.totalUrls > 0 && (
-                                <Badge
-                                    colorScheme="purple"
-                                    fontSize="sm"
-                                    px={3}
-                                    py={1}
-                                    borderRadius="full"
+
+                                <Button
+                                    leftIcon={<FaChartLine />}
+                                    bg="#a961ff"
+                                    color="white"
+                                    _hover={{ bg: '#8f4ee6' }}
+                                    onClick={handleMarketAnalysis}
+                                    isLoading={isAnalyzingMarket}
+                                    loadingText="Analyzing Market Opportunities..."
+                                    size="lg"
+                                    width="full"
+                                    mt={6}
+                                    isDisabled={insights.length === 0}
                                 >
-                                    {processingStatus.processedUrls} / {processingStatus.totalUrls}
-                                </Badge>
-                            )}
-                        </HStack>
-                    </Card>
-                )}
+                                    Analyze Market Opportunities
+                                </Button>
+                            </CardBody>
+                        </Card>
+                    )}
 
-                {/* Step 1: Research Setup */}
-                <Card>
-                    <CardHeader bg="#a961ff10" p={4} borderBottomWidth="1px">
-                        <VStack spacing={2}>
-                            <Icon as={FaKeyboard} boxSize={6} color="#a961ff" />
-                            <Heading size="md" textAlign="center" color="#a961ff">Step 1: Research Setup</Heading>
-                        </VStack>
-                    </CardHeader>
-                    <CardBody p={4}>
-                        <VStack spacing={6}>
-                            <FormControl>
-                                <FormLabel fontSize="lg">Keywords</FormLabel>
-                                <FormHelperText mb={2}>Enter keywords to find relevant content</FormHelperText>
-                                <HStack spacing={4}>
-                                    <Input
-                                        value={keywords[0]}
-                                        onChange={(e) => handleKeywordChange(0, e.target.value)}
-                                        placeholder="Enter keywords (e.g., joint pain, arthritis)"
-                                    />
-                                    <Button
-                                        leftIcon={<FaSearch />}
-                                        onClick={handleSearch}
-                                        isLoading={isSearching}
-                                        loadingText="Searching..."
-                                        colorScheme="purple"
-                                        px={8}
-                                    >
-                                        Get URLs
-                                    </Button>
-                                </HStack>
-                            </FormControl>
-
-                            <FormControl>
-                                <FormLabel fontSize="lg">Sources</FormLabel>
-                                <FormHelperText mb={2}>Select sources to search from</FormHelperText>
-                                <HStack spacing={6} py={2}>
-                                    <HStack>
-                                        <input
-                                            type="checkbox"
-                                            id="reddit"
-                                            checked={sources.reddit}
-                                            onChange={() => handleSourceChange('reddit')}
+                    {/* Step 3: Market Opportunities */}
+                    {getCurrentStep() === 3 && (
+                        <Card>
+                            <CardHeader bg="#a961ff10" p={4} borderBottomWidth="1px">
+                                <VStack spacing={2}>
+                                    <Icon as={FaChartLine} boxSize={6} color="#a961ff" />
+                                    <Heading size="md" textAlign="center" color="#a961ff">Market Opportunities</Heading>
+                                </VStack>
+                            </CardHeader>
+                            <CardBody p={4}>
+                                {marketOpportunities.length > 0 ? (
+                                    <HStack spacing={4} align="center">
+                                        <IconButton
+                                            icon={<FaChevronLeft />}
+                                            onClick={handlePreviousOpportunity}
+                                            isDisabled={currentOpportunityIndex === 0}
+                                            colorScheme="purple"
+                                            variant="ghost"
+                                            size="lg"
                                         />
-                                        <Icon as={FaReddit} color="#FF4500" />
-                                        <Text>Reddit</Text>
-                                    </HStack>
-                                    <HStack opacity={0.5}>
-                                        <input
-                                            type="checkbox"
-                                            id="amazon"
-                                            checked={sources.amazon}
-                                            onChange={() => handleSourceChange('amazon')}
-                                            disabled
-                                        />
-                                        <Icon as={FaAmazon} color="#FF9900" />
-                                        <Text>Amazon (Coming Soon)</Text>
-                                    </HStack>
-                                    <HStack opacity={0.5}>
-                                        <input
-                                            type="checkbox"
-                                            id="youtube"
-                                            checked={sources.youtube}
-                                            onChange={() => handleSourceChange('youtube')}
-                                            disabled
-                                        />
-                                        <Icon as={FaYoutube} color="#FF0000" />
-                                        <Text>YouTube (Coming Soon)</Text>
-                                    </HStack>
-                                </HStack>
-                            </FormControl>
-
-                            <FormControl>
-                                <FormLabel fontSize="lg">Add URLs Manually</FormLabel>
-                                <FormHelperText mb={2}>Enter specific URLs you want to analyze</FormHelperText>
-                                <HStack spacing={4}>
-                                    <Input
-                                        value={manualUrl}
-                                        onChange={(e) => setManualUrl(e.target.value)}
-                                        placeholder="Enter a URL"
-                                    />
-                                    <Button
-                                        leftIcon={<FaPlus />}
-                                        onClick={handleAddManualUrl}
-                                        colorScheme="purple"
-                                        px={8}
-                                    >
-                                        Add URL
-                                    </Button>
-                                </HStack>
-                            </FormControl>
-
-                            {collectedUrls.length > 0 ? (
-                                <Card p={4} variant="outline" borderColor="purple.200">
-                                    <FormLabel fontSize="lg" color="purple.600">
-                                        <HStack>
-                                            <Icon as={FaLink} />
-                                            <Text>URLs to Analyze</Text>
-                                            <Badge colorScheme="purple">{collectedUrls.length} URLs</Badge>
-                                        </HStack>
-                                    </FormLabel>
-                                    <Stack spacing={2}>
-                                        {collectedUrls.map((url, index) => (
-                                            <HStack
-                                                key={index}
-                                                p={2}
-                                                borderWidth="1px"
-                                                borderRadius="md"
-                                                fontSize="sm"
-                                            >
-                                                <Link href={url} isExternal color="blue.500" flex={1}>
-                                                    {url}
-                                                </Link>
-                                                <IconButton
-                                                    icon={<FaTrash />}
-                                                    onClick={() => handleRemoveUrl(url)}
-                                                    size="sm"
-                                                    colorScheme="red"
-                                                    variant="ghost"
+                                        <Box flex={1}>
+                                            <VStack spacing={4}>
+                                                <HStack justify="center" spacing={2} mb={2}>
+                                                    {marketOpportunities.map((_, idx) => (
+                                                        <Box
+                                                            key={idx}
+                                                            w="8px"
+                                                            h="8px"
+                                                            borderRadius="full"
+                                                            bg={idx === currentOpportunityIndex ? "#a961ff" : "gray.200"}
+                                                        />
+                                                    ))}
+                                                </HStack>
+                                                <MarketOpportunityCard
+                                                    opportunity={marketOpportunities[currentOpportunityIndex]}
                                                 />
-                                            </HStack>
-                                        ))}
-                                    </Stack>
-                                </Card>
-                            ) : (
-                                <EmptyState
-                                    icon={FaLink}
-                                    title="No URLs Added Yet"
-                                    description="Search using keywords or add URLs manually to begin analysis"
-                                />
-                            )}
-
-                            <Button
-                                leftIcon={<FaLightbulb />}
-                                onClick={handleAnalyze}
-                                isLoading={isAnalyzing}
-                                loadingText="Analyzing Content..."
-                                colorScheme="purple"
-                                width="full"
-                                isDisabled={collectedUrls.length === 0}
-                            >
-                                Analyze Content
-                            </Button>
-                        </VStack>
-                    </CardBody>
-                </Card>
-
-                {/* Step 2: Content Analysis */}
-                <Card>
-                    <CardHeader bg="#a961ff10" p={4} borderBottomWidth="1px">
-                        <VStack spacing={2}>
-                            <Icon as={FaLightbulb} boxSize={6} color="#a961ff" />
-                            <Heading size="md" textAlign="center" color="#a961ff">Step 2: Content Analysis</Heading>
-                        </VStack>
-                    </CardHeader>
-                    <CardBody p={4}>
-                        {insights.length > 0 ? (
-                            <SimpleGrid columns={{ base: 1, lg: 3 }} spacing={6}>
-                                <InsightBox
-                                    title="Key Insights"
-                                    icon={FaLightbulb}
-                                    insights={insights.filter(i => i.type === 'insight')}
-                                    count={insights.filter(i => i.type === 'insight').length}
-                                    brandColor="#2ECC71"
-                                />
-                                <InsightBox
-                                    title="Notable Quotes"
-                                    icon={FaQuoteRight}
-                                    insights={insights.filter(i => i.type === 'quote')}
-                                    count={insights.filter(i => i.type === 'quote').length}
-                                    brandColor="#E74C3C"
-                                />
-                                <InsightBox
-                                    title="Keywords Found"
-                                    icon={FaBookmark}
-                                    insights={insights.filter(i => i.type === 'keyword')}
-                                    count={insights.filter(i => i.type === 'keyword').length}
-                                    brandColor="#3498DB"
-                                />
-                            </SimpleGrid>
-                        ) : (
-                            <EmptyState
-                                icon={FaLightbulb}
-                                title="No Content Analysis Yet"
-                                description="Add URLs and analyze content to see insights here"
-                            />
-                        )}
-
-                        <Button
-                            leftIcon={<FaChartLine />}
-                            bg="#a961ff"
-                            color="white"
-                            _hover={{ bg: '#8f4ee6' }}
-                            onClick={handleMarketAnalysis}
-                            isLoading={isAnalyzingMarket}
-                            loadingText="Analyzing Market Opportunities..."
-                            size="lg"
-                            width="full"
-                            mt={6}
-                            isDisabled={insights.length === 0}
-                        >
-                            Analyze Market Opportunities
-                        </Button>
-                    </CardBody>
-                </Card>
-
-                {/* Step 3: Market Opportunities */}
-                <Card>
-                    <CardHeader bg="#a961ff10" p={4} borderBottomWidth="1px">
-                        <VStack spacing={2}>
-                            <Icon as={FaChartLine} boxSize={6} color="#a961ff" />
-                            <Heading size="md" textAlign="center" color="#a961ff">Step 3: Market Opportunities</Heading>
-                        </VStack>
-                    </CardHeader>
-                    <CardBody p={4}>
-                        {marketOpportunities.length > 0 ? (
-                            <HStack spacing={4} align="center">
-                                <IconButton
-                                    icon={<FaChevronLeft />}
-                                    onClick={handlePreviousOpportunity}
-                                    isDisabled={currentOpportunityIndex === 0}
-                                    colorScheme="purple"
-                                    variant="ghost"
-                                    size="lg"
-                                />
-                                <Box flex={1}>
-                                    <VStack spacing={4}>
-                                        <HStack justify="center" spacing={2} mb={2}>
-                                            {marketOpportunities.map((_, idx) => (
-                                                <Box
-                                                    key={idx}
-                                                    w="8px"
-                                                    h="8px"
-                                                    borderRadius="full"
-                                                    bg={idx === currentOpportunityIndex ? "#a961ff" : "gray.200"}
-                                                />
-                                            ))}
-                                        </HStack>
-                                        <MarketOpportunityCard
-                                            opportunity={marketOpportunities[currentOpportunityIndex]}
+                                            </VStack>
+                                        </Box>
+                                        <IconButton
+                                            icon={<FaChevronRight />}
+                                            onClick={handleNextOpportunity}
+                                            isDisabled={currentOpportunityIndex === marketOpportunities.length - 1}
+                                            colorScheme="purple"
+                                            variant="ghost"
+                                            size="lg"
                                         />
-                                    </VStack>
-                                </Box>
-                                <IconButton
-                                    icon={<FaChevronRight />}
-                                    onClick={handleNextOpportunity}
-                                    isDisabled={currentOpportunityIndex === marketOpportunities.length - 1}
-                                    colorScheme="purple"
-                                    variant="ghost"
-                                    size="lg"
-                                />
-                            </HStack>
-                        ) : (
-                            <EmptyState
-                                icon={FaChartLine}
-                                title="No Market Opportunities Yet"
-                                description="Analyze your content insights to discover market opportunities"
-                            />
-                        )}
-                    </CardBody>
-                </Card>
-            </VStack>
-        </Container>
+                                    </HStack>
+                                ) : (
+                                    <EmptyState
+                                        icon={FaChartLine}
+                                        title="No Market Opportunities Yet"
+                                        description="Analyze your content insights to discover market opportunities"
+                                    />
+                                )}
+                            </CardBody>
+                        </Card>
+                    )}
+                </VStack>
+            </Container>
+        </MarketingResearchLayout>
     );
 };
 
