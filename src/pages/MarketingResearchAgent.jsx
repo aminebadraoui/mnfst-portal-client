@@ -262,55 +262,7 @@ const MarketingResearchAgent = () => {
         loadResearch();
     }, [researchId]);
 
-    // Initialize new research when starting
-    const initializeResearch = async () => {
-        if (!currentResearch && !researchId) {
-            try {
-                const research = await createResearch();
-                setCurrentResearch(research);
-                navigate(`/marketing-research/${research.id}`);
-            } catch (error) {
-                toast({
-                    title: 'Error Creating Research',
-                    description: error.message,
-                    status: 'error',
-                    duration: 5000,
-                    isClosable: true,
-                });
-            }
-        }
-    };
-
-    // Call initializeResearch when component mounts
-    useEffect(() => {
-        initializeResearch();
-    }, []);
-
-    // Update collected URLs in research
-    const updateResearchWithUrls = async (urls) => {
-        if (currentResearch) {
-            try {
-                const updated = await updateResearchUrls(currentResearch.id, urls);
-                setCurrentResearch(updated);
-            } catch (error) {
-                console.error('Error updating research URLs:', error);
-            }
-        }
-    };
-
-    const handleKeywordChange = (index, value) => {
-        const newKeywords = [...keywords];
-        newKeywords[index] = value;
-        setKeywords(newKeywords);
-    };
-
-    const handleSourceChange = (source) => {
-        setSources(prev => ({
-            ...prev,
-            [source]: !prev[source]
-        }));
-    };
-
+    // Update the URL handling functions to handle research creation
     const handleSearch = async () => {
         try {
             setIsSearching(true);
@@ -355,19 +307,16 @@ const MarketingResearchAgent = () => {
                 .filter(item => item.url)
                 .map(item => item.url);
 
-            setCollectedUrls(prev => {
-                const newUrls = [...new Set([...prev, ...urls])];
-                // Update research with new URLs
-                updateResearchWithUrls(newUrls);
-                return newUrls;
-            });
-            toast({
-                title: 'Search Complete',
-                description: `Found ${urls.length} relevant links`,
-                status: 'success',
-                duration: 5000,
-                isClosable: true,
-            });
+            if (urls.length > 0) {
+                await handleUrlsUpdate(urls);
+                toast({
+                    title: 'Search Complete',
+                    description: `Found ${urls.length} relevant links`,
+                    status: 'success',
+                    duration: 5000,
+                    isClosable: true,
+                });
+            }
         } catch (error) {
             toast({
                 title: 'Search Failed',
@@ -382,14 +331,39 @@ const MarketingResearchAgent = () => {
         }
     };
 
-    const handleAddManualUrl = () => {
-        if (manualUrl.trim()) {
-            setCollectedUrls(prev => {
-                const newUrls = [...new Set([...prev, manualUrl.trim()])];
-                // Update research with new URLs
-                updateResearchWithUrls(newUrls);
-                return newUrls;
+    const handleUrlsUpdate = async (newUrls) => {
+        try {
+            if (!currentResearch && !researchId) {
+                // Create new research only when we have URLs
+                const research = await createResearch();
+                setCurrentResearch(research);
+                navigate(`/marketing-research/${research.id}`);
+
+                // Update the URLs after research is created
+                const updated = await updateResearchUrls(research.id, newUrls);
+                setCurrentResearch(updated);
+            } else if (currentResearch) {
+                // Update existing research
+                const updated = await updateResearchUrls(currentResearch.id, newUrls);
+                setCurrentResearch(updated);
+            }
+            setCollectedUrls(newUrls);
+        } catch (error) {
+            console.error('Error updating research URLs:', error);
+            toast({
+                title: 'Error',
+                description: 'Failed to update research URLs',
+                status: 'error',
+                duration: 5000,
+                isClosable: true,
             });
+        }
+    };
+
+    const handleAddManualUrl = async () => {
+        if (manualUrl.trim()) {
+            const newUrls = [...new Set([...collectedUrls, manualUrl.trim()])];
+            await handleUrlsUpdate(newUrls);
             setManualUrl('');
             toast({
                 title: 'URL Added',
@@ -401,13 +375,22 @@ const MarketingResearchAgent = () => {
         }
     };
 
-    const handleRemoveUrl = (urlToRemove) => {
-        setCollectedUrls(prev => {
-            const newUrls = prev.filter(url => url !== urlToRemove);
-            // Update research with new URLs
-            updateResearchWithUrls(newUrls);
-            return newUrls;
-        });
+    const handleRemoveUrl = async (urlToRemove) => {
+        const newUrls = collectedUrls.filter(url => url !== urlToRemove);
+        await handleUrlsUpdate(newUrls);
+    };
+
+    const handleKeywordChange = (index, value) => {
+        const newKeywords = [...keywords];
+        newKeywords[index] = value;
+        setKeywords(newKeywords);
+    };
+
+    const handleSourceChange = (source) => {
+        setSources(prev => ({
+            ...prev,
+            [source]: !prev[source]
+        }));
     };
 
     const handleAnalyze = async () => {

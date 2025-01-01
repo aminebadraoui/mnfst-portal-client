@@ -7,8 +7,9 @@ import {
     Flex,
     Button,
     useColorModeValue,
+    Divider,
 } from '@chakra-ui/react';
-import { FaChevronLeft, FaSearch, FaFileAlt, FaBullseye, FaCheckCircle } from 'react-icons/fa';
+import { FaChevronLeft, FaSearch, FaFileAlt, FaBullseye, FaCheckCircle, FaSignOutAlt } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 
 const WizardStep = ({ icon, title, isActive, isCompleted }) => {
@@ -108,6 +109,35 @@ const MarketingResearchLayout = ({ children, currentStep = 1 }) => {
                                 isCompleted={currentStep > index + 1}
                             />
                         ))}
+
+                        {currentStep === 3 && (
+                            <>
+                                <Divider my={2} />
+                                <Flex
+                                    align="center"
+                                    p="4"
+                                    mx="4"
+                                    borderRadius="lg"
+                                    role="group"
+                                    cursor="pointer"
+                                    onClick={() => navigate('/marketing-research/list')}
+                                    bg="green.50"
+                                    color="green.600"
+                                    borderWidth="1px"
+                                    borderColor="green.200"
+                                    _hover={{
+                                        bg: 'green.100',
+                                    }}
+                                >
+                                    <Icon
+                                        mr="4"
+                                        fontSize="16"
+                                        as={FaSignOutAlt}
+                                    />
+                                    <Text fontWeight="medium">Exit & Save</Text>
+                                </Flex>
+                            </>
+                        )}
                     </VStack>
                 </VStack>
             </Box>
