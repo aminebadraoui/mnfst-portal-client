@@ -9,57 +9,111 @@ import {
     useColorModeValue,
     Divider,
 } from '@chakra-ui/react';
-import { FaChevronLeft, FaSearch, FaFileAlt, FaBullseye, FaCheckCircle, FaSignOutAlt } from 'react-icons/fa';
+import {
+    FaChevronLeft,
+    FaEdit,
+    FaGlobe,
+    FaSearch,
+    FaFileAlt,
+    FaBullseye,
+    FaCheckCircle,
+    FaSignOutAlt
+} from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 
-const WizardStep = ({ icon, title, isActive, isCompleted }) => {
+const WizardStep = ({ icon, title, isActive, isCompleted, description, onClick, stepNumber, highestStep }) => {
     const bg = useColorModeValue('white', 'gray.800');
     const activeBg = useColorModeValue('purple.50', 'purple.800');
     const borderColor = useColorModeValue('gray.200', 'gray.700');
+    const isAccessible = stepNumber <= highestStep;
 
     return (
         <Flex
-            align="center"
+            direction="column"
             p="4"
             mx="4"
             borderRadius="lg"
             role="group"
-            cursor="pointer"
+            cursor={isAccessible ? "pointer" : "default"}
             bg={isActive ? activeBg : bg}
             borderWidth="1px"
             borderColor={isActive ? 'purple.500' : borderColor}
-            color={isActive ? 'purple.500' : isCompleted ? 'green.500' : 'gray.500'}
+            color={isActive ? 'purple.500' : isAccessible ? 'gray.900' : 'gray.500'}
+            onClick={() => isAccessible && onClick && onClick()}
+            _hover={isAccessible ? {
+                bg: 'purple.50',
+                transform: 'translateY(-2px)',
+                transition: 'all 0.2s'
+            } : {}}
         >
-            {icon && (
-                <Icon
-                    mr="4"
-                    fontSize="16"
-                    as={icon}
-                />
-            )}
-            <Text fontWeight={isActive ? "bold" : "normal"}>{title}</Text>
-            {isCompleted && (
-                <Icon
-                    ml="auto"
-                    fontSize="16"
-                    as={FaCheckCircle}
-                />
+            <Flex align="center">
+                {icon && (
+                    <Icon
+                        mr="4"
+                        fontSize="16"
+                        as={icon}
+                    />
+                )}
+                <Text fontWeight={isActive ? "bold" : "normal"}>{title}</Text>
+                {isCompleted && (
+                    <Icon
+                        ml="auto"
+                        fontSize="16"
+                        as={FaCheckCircle}
+                        color="green.500"
+                    />
+                )}
+            </Flex>
+            {description && isActive && (
+                <Text
+                    fontSize="sm"
+                    color="gray.500"
+                    mt={2}
+                    pl={8}
+                >
+                    {description}
+                </Text>
             )}
         </Flex>
     );
 };
 
-const MarketingResearchLayout = ({ children, currentStep = 1 }) => {
+const MarketingResearchLayout = ({ children, currentStep = 1, onStepClick }) => {
     const navigate = useNavigate();
     const bg = useColorModeValue('gray.50', 'gray.900');
     const sidebarBg = useColorModeValue('white', 'gray.800');
     const borderColor = useColorModeValue('gray.200', 'gray.700');
 
     const steps = [
-        { icon: FaSearch, title: 'Research Keywords' },
-        { icon: FaFileAlt, title: 'Content Analysis' },
-        { icon: FaBullseye, title: 'Market Opportunities' },
+        {
+            icon: FaEdit,
+            title: 'Name Research',
+            description: 'Give your research a meaningful name'
+        },
+        {
+            icon: FaGlobe,
+            title: 'Select Source',
+            description: 'Choose one source to gather data from'
+        },
+        {
+            icon: FaSearch,
+            title: 'Research Keywords',
+            description: 'Enter keywords to find relevant content'
+        },
+        {
+            icon: FaFileAlt,
+            title: 'Content Analysis',
+            description: 'Analyze gathered content for insights'
+        },
+        {
+            icon: FaBullseye,
+            title: 'Market Opportunities',
+            description: 'Discover potential market opportunities'
+        },
     ];
+
+    // The highest step the user has reached
+    const highestStep = Math.max(currentStep, steps.length);
 
     return (
         <Box minH="100vh" bg={bg}>
@@ -105,12 +159,16 @@ const MarketingResearchLayout = ({ children, currentStep = 1 }) => {
                                 key={index}
                                 icon={step.icon}
                                 title={step.title}
+                                description={step.description}
                                 isActive={currentStep === index + 1}
                                 isCompleted={currentStep > index + 1}
+                                onClick={() => onStepClick && onStepClick(index + 1)}
+                                stepNumber={index + 1}
+                                highestStep={highestStep}
                             />
                         ))}
 
-                        {currentStep === 3 && (
+                        {currentStep === 5 && (
                             <>
                                 <Divider my={2} />
                                 <Flex

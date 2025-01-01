@@ -25,7 +25,7 @@ import {
     UnorderedList,
     ListItem,
 } from '@chakra-ui/react';
-import { FaPlus, FaTrash, FaKeyboard, FaLightbulb, FaQuoteRight, FaReddit, FaChartLine, FaBookmark, FaChevronLeft, FaChevronRight, FaAmazon, FaYoutube, FaSearch, FaLink, FaHistory } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaKeyboard, FaLightbulb, FaQuoteRight, FaReddit, FaChartLine, FaBookmark, FaChevronLeft, FaChevronRight, FaAmazon, FaYoutube, FaSearch, FaLink, FaHistory, FaEdit, FaGlobe, FaTwitter, FaFacebook, FaShoppingCart } from 'react-icons/fa';
 import api from '../services/api';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
@@ -216,6 +216,11 @@ const MarketingResearchAgent = () => {
     const [currentResearch, setCurrentResearch] = useState(null);
     const { researchId } = useParams();
     const navigate = useNavigate();
+    const [researchName, setResearchName] = useState('');
+    const [selectedSource, setSelectedSource] = useState('');
+    const [activeStep, setActiveStep] = useState(1);
+    const [highestStep, setHighestStep] = useState(1);
+    const [manualStep, setManualStep] = useState(null);
 
     // Load existing research if researchId is provided
     useEffect(() => {
@@ -395,6 +400,10 @@ const MarketingResearchAgent = () => {
 
     const handleAnalyze = async () => {
         try {
+            // First move to Content Analysis step
+            setManualStep(4);
+
+            // Then start the analysis
             setIsAnalyzing(true);
             setProcessingStatus({
                 isProcessing: true,
@@ -524,6 +533,10 @@ const MarketingResearchAgent = () => {
 
     const handleMarketAnalysis = async () => {
         try {
+            // First move to Market Opportunities step
+            setManualStep(5);
+
+            // Then start the analysis
             setIsAnalyzingMarket(true);
 
             const requestData = {
@@ -609,19 +622,168 @@ const MarketingResearchAgent = () => {
         }
     };
 
+    // Update highest step when progress is made
+    useEffect(() => {
+        let newHighestStep = 1;
+        if (marketOpportunities.length > 0 || isAnalyzingMarket) {
+            newHighestStep = 5;
+        } else if (insights.length > 0 || isAnalyzing) {
+            newHighestStep = 4;
+        } else if (collectedUrls.length > 0) {
+            newHighestStep = 3;
+        } else if (selectedSource) {
+            newHighestStep = 2;
+        }
+        setHighestStep(Math.max(highestStep, newHighestStep));
+    }, [marketOpportunities.length, insights.length, collectedUrls.length, selectedSource, isAnalyzing, isAnalyzingMarket]);
+
     // Determine current step based on state
     const getCurrentStep = () => {
-        if (marketOpportunities.length > 0) {
-            return 3;
+        // If user manually selected a step, show that
+        if (manualStep !== null) {
+            return manualStep;
         }
-        if (insights.length > 0) {
+
+        // Otherwise, determine step based on progress
+        if (marketOpportunities.length > 0) {
+            return 5;
+        } else if (insights.length > 0) {
+            return 4;
+        } else if (collectedUrls.length > 0) {
+            return 3;
+        } else if (selectedSource) {
             return 2;
         }
         return 1;
     };
 
+    // Update step navigation
+    const handleStepClick = (step) => {
+        // Allow navigation to any step up to the highest completed step
+        if (step <= highestStep) {
+            setManualStep(step);
+        }
+    };
+
+    // Update the source selection button's continue handler
+    const handleSourceContinue = () => {
+        setSources({
+            reddit: selectedSource === 'reddit',
+            amazon: selectedSource === 'amazon',
+            youtube: selectedSource === 'youtube'
+        });
+        setHighestStep(Math.max(highestStep, 3));
+        setManualStep(3);
+    };
+
+    // Update the name research continue handler
+    const handleNameContinue = () => {
+        setSelectedSource('reddit');
+        setHighestStep(Math.max(highestStep, 2));
+        setManualStep(2);
+    };
+
+    // Update the source selection button
+    const renderSourceSelection = () => (
+        <Card>
+            <CardHeader bg="#a961ff10" p={4} borderBottomWidth="1px">
+                <VStack spacing={2}>
+                    <Icon as={FaGlobe} boxSize={6} color="#a961ff" />
+                    <Heading size="md" textAlign="center" color="#a961ff">Select Source</Heading>
+                </VStack>
+            </CardHeader>
+            <CardBody p={4}>
+                <VStack spacing={6}>
+                    <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={4} width="full">
+                        {[
+                            { id: 'reddit', name: 'Reddit', icon: FaReddit, color: '#FF4500', isAvailable: true },
+                            { id: 'youtube', name: 'YouTube', icon: FaYoutube, color: '#FF0000', isAvailable: false },
+                            { id: 'twitter', name: 'Twitter (X)', icon: FaTwitter, color: '#1DA1F2', isAvailable: false },
+                            { id: 'facebook', name: 'Facebook', icon: FaFacebook, color: '#4267B2', isAvailable: false },
+                            { id: 'amazon', name: 'Amazon', icon: FaAmazon, color: '#FF9900', isAvailable: false },
+                            { id: 'shopping', name: 'Google Shopping', icon: FaShoppingCart, color: '#4285F4', isAvailable: false },
+                        ].map((source) => (
+                            <Box
+                                key={source.id}
+                                p={4}
+                                borderWidth="1px"
+                                borderRadius="lg"
+                                cursor={source.isAvailable ? "pointer" : "not-allowed"}
+                                onClick={() => source.isAvailable && setSelectedSource(source.id)}
+                                bg={selectedSource === source.id ? `${source.color}10` : 'white'}
+                                borderColor={selectedSource === source.id ? source.color : 'gray.200'}
+                                opacity={source.isAvailable ? 1 : 0.5}
+                                _hover={source.isAvailable ? {
+                                    borderColor: source.color,
+                                    transform: 'translateY(-2px)',
+                                    transition: 'all 0.2s',
+                                } : {}}
+                            >
+                                <VStack spacing={3}>
+                                    <Icon as={source.icon} boxSize={8} color={source.color} />
+                                    <Text fontWeight="bold" color={source.color}>
+                                        {source.name}
+                                    </Text>
+                                    {!source.isAvailable && (
+                                        <Badge colorScheme="gray">Coming Soon</Badge>
+                                    )}
+                                </VStack>
+                            </Box>
+                        ))}
+                    </SimpleGrid>
+
+                    <Button
+                        colorScheme="purple"
+                        size="lg"
+                        width="full"
+                        isDisabled={!selectedSource}
+                        onClick={handleSourceContinue}
+                    >
+                        Continue with {selectedSource ? selectedSource.charAt(0).toUpperCase() + selectedSource.slice(1) : ''}
+                    </Button>
+                </VStack>
+            </CardBody>
+        </Card>
+    );
+
+    // Update step 1 continue button
+    const renderNameResearch = () => (
+        <Card>
+            <CardHeader bg="#a961ff10" p={4} borderBottomWidth="1px">
+                <VStack spacing={2}>
+                    <Icon as={FaEdit} boxSize={6} color="#a961ff" />
+                    <Heading size="md" textAlign="center" color="#a961ff">Name Your Research</Heading>
+                </VStack>
+            </CardHeader>
+            <CardBody p={4}>
+                <VStack spacing={6}>
+                    <FormControl isRequired>
+                        <FormLabel fontSize="lg">Research Name</FormLabel>
+                        <FormHelperText mb={2}>Give your research a descriptive name</FormHelperText>
+                        <Input
+                            value={researchName}
+                            onChange={(e) => setResearchName(e.target.value)}
+                            placeholder="e.g., Health Supplements Market Research"
+                            size="lg"
+                        />
+                    </FormControl>
+
+                    <Button
+                        colorScheme="purple"
+                        size="lg"
+                        width="full"
+                        isDisabled={!researchName.trim()}
+                        onClick={handleNameContinue}
+                    >
+                        Continue
+                    </Button>
+                </VStack>
+            </CardBody>
+        </Card>
+    );
+
     return (
-        <MarketingResearchLayout currentStep={getCurrentStep()}>
+        <MarketingResearchLayout currentStep={getCurrentStep()} onStepClick={handleStepClick}>
             <Container maxW="container.xl">
                 <VStack spacing={8} align="stretch">
                     <Box>
@@ -673,8 +835,9 @@ const MarketingResearchAgent = () => {
                         </Card>
                     )}
 
-                    {/* Step 1: Research Setup */}
-                    {getCurrentStep() === 1 && (
+                    {getCurrentStep() === 1 && renderNameResearch()}
+                    {getCurrentStep() === 2 && renderSourceSelection()}
+                    {getCurrentStep() === 3 && (
                         <Card>
                             <CardHeader bg="#a961ff10" p={4} borderBottomWidth="1px">
                                 <VStack spacing={2}>
@@ -703,45 +866,6 @@ const MarketingResearchAgent = () => {
                                             >
                                                 Get URLs
                                             </Button>
-                                        </HStack>
-                                    </FormControl>
-
-                                    <FormControl>
-                                        <FormLabel fontSize="lg">Sources</FormLabel>
-                                        <FormHelperText mb={2}>Select sources to search from</FormHelperText>
-                                        <HStack spacing={6} py={2}>
-                                            <HStack>
-                                                <input
-                                                    type="checkbox"
-                                                    id="reddit"
-                                                    checked={sources.reddit}
-                                                    onChange={() => handleSourceChange('reddit')}
-                                                />
-                                                <Icon as={FaReddit} color="#FF4500" />
-                                                <Text>Reddit</Text>
-                                            </HStack>
-                                            <HStack opacity={0.5}>
-                                                <input
-                                                    type="checkbox"
-                                                    id="amazon"
-                                                    checked={sources.amazon}
-                                                    onChange={() => handleSourceChange('amazon')}
-                                                    disabled
-                                                />
-                                                <Icon as={FaAmazon} color="#FF9900" />
-                                                <Text>Amazon (Coming Soon)</Text>
-                                            </HStack>
-                                            <HStack opacity={0.5}>
-                                                <input
-                                                    type="checkbox"
-                                                    id="youtube"
-                                                    checked={sources.youtube}
-                                                    onChange={() => handleSourceChange('youtube')}
-                                                    disabled
-                                                />
-                                                <Icon as={FaYoutube} color="#FF0000" />
-                                                <Text>YouTube (Coming Soon)</Text>
-                                            </HStack>
                                         </HStack>
                                     </FormControl>
 
@@ -821,8 +945,7 @@ const MarketingResearchAgent = () => {
                         </Card>
                     )}
 
-                    {/* Step 2: Content Analysis */}
-                    {getCurrentStep() === 2 && (
+                    {getCurrentStep() === 4 && (
                         <Card>
                             <CardHeader bg="#a961ff10" p={4} borderBottomWidth="1px">
                                 <VStack spacing={2}>
@@ -874,7 +997,7 @@ const MarketingResearchAgent = () => {
                                     size="lg"
                                     width="full"
                                     mt={6}
-                                    isDisabled={insights.length === 0}
+                                    isDisabled={insights.length === 0 || isAnalyzing}
                                 >
                                     Analyze Market Opportunities
                                 </Button>
@@ -882,8 +1005,7 @@ const MarketingResearchAgent = () => {
                         </Card>
                     )}
 
-                    {/* Step 3: Market Opportunities */}
-                    {getCurrentStep() === 3 && (
+                    {getCurrentStep() === 5 && (
                         <Card>
                             <CardHeader bg="#a961ff10" p={4} borderBottomWidth="1px">
                                 <VStack spacing={2}>
