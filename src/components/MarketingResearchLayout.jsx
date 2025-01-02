@@ -201,7 +201,7 @@ const MarketingResearchLayout = ({ children, currentStep = 1, onStepClick }) => 
             </Box>
 
             {/* Main Content */}
-            <Box ml="64" p="4">
+            <Box ml="0" p="4">
                 {children}
             </Box>
         </Box>

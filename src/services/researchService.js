@@ -1,8 +1,12 @@
 import api from './api';
 
-export const createResearch = async () => {
+export const createResearch = async (name, source) => {
     try {
-        const response = await api.post('/research');
+        const response = await api.post('/research', {
+            name,
+            source,
+            urls: []
+        });
         return response.data;
     } catch (error) {
         console.error('Error creating research:', error);

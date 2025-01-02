@@ -231,6 +231,8 @@ const MarketingResearchAgent = () => {
                     setCurrentResearch(research);
                     // Restore state from research
                     if (research.urls) setCollectedUrls(research.urls);
+                    if (research.name) setResearchName(research.name);
+                    if (research.source) setSelectedSource(research.source);
                     if (research.content_analysis?.insights) {
                         const restoredInsights = [];
                         research.content_analysis.insights.forEach(insight => {
@@ -340,7 +342,7 @@ const MarketingResearchAgent = () => {
         try {
             if (!currentResearch && !researchId) {
                 // Create new research only when we have URLs
-                const research = await createResearch();
+                const research = await createResearch(researchName, selectedSource);
                 setCurrentResearch(research);
                 navigate(`/marketing-research/${research.id}`);
 

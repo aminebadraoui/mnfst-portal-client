@@ -122,6 +122,11 @@ const ResearchCard = ({ research, onDelete }) => {
                             </Badge>
                         </HStack>
 
+                        <Box>
+                            <Heading size="sm" mb={1}>{research.name || 'Untitled Research'}</Heading>
+                            <Badge colorScheme="blue" mb={4}>{research.source || 'reddit'}</Badge>
+                        </Box>
+
                         <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
                             <Box p={3} bg="green.50" borderRadius="md">
                                 <VStack>
