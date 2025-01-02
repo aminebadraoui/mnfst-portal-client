@@ -59,9 +59,9 @@ export const saveMarketAnalysis = async (researchId, opportunities) => {
         const formattedOpportunities = opportunities.map(opp => ({
             opportunity: opp.opportunity,
             pain_points: opp.pain_points,
-            target_market: opp.target_market,
+            target_audience: opp.target_audience,
             potential_solutions: opp.potential_solutions,
-            supporting_quotes: opp.supporting_quotes
+            supporting_insights: opp.supporting_insights
         }));
 
         const response = await api.post(`/market-research/${researchId}/market-analysis`, formattedOpportunities);
@@ -79,4 +79,27 @@ export const deleteResearch = async (researchId) => {
     } catch (error) {
         throw new Error(error.response?.data?.detail || 'Failed to delete research');
     }
+};
+
+export const startAnalysis = async (researchId, urls) => {
+    const response = await api.post('/community-analysis/analyze-insights', {
+        research_id: researchId,
+        urls: urls
+    });
+    return response.data;
+};
+
+export const startMarketAnalysis = async (researchId, insights, quotes, keywords_found) => {
+    const response = await api.post('/community-analysis/analyze-trends', {
+        research_id: researchId,
+        insights,
+        quotes,
+        keywords_found
+    });
+    return response.data;
+};
+
+export const checkTaskStatus = async (taskId) => {
+    const response = await api.get(`/community-analysis/task/${taskId}`);
+    return response.data;
 }; 

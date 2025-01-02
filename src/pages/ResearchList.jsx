@@ -23,7 +23,7 @@ import {
     AlertDialogOverlay,
     Button,
 } from '@chakra-ui/react';
-import { FaLink, FaLightbulb, FaChartLine, FaTrash, FaChevronLeft } from 'react-icons/fa';
+import { FaLink, FaLightbulb, FaChartLine, FaTrash, FaChevronLeft, FaExclamationCircle } from 'react-icons/fa';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { listResearch, deleteResearch } from '../services/researchService';
 
@@ -67,7 +67,8 @@ const DeleteConfirmationDialog = ({ isOpen, onClose, onConfirm, isDeleting }) =>
 
 const ResearchCard = ({ research, onDelete }) => {
     const insightsCount = research.community_analysis?.insights?.length || 0;
-    const opportunitiesCount = research.market_analysis?.opportunities?.length || 0;
+    const opportunities = research.market_analysis?.opportunities || [];
+    const opportunitiesCount = opportunities.length;
     const { isOpen, onOpen, onClose } = useDisclosure();
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -146,6 +147,17 @@ const ResearchCard = ({ research, onDelete }) => {
                             </Box>
                         </SimpleGrid>
 
+                        {opportunities.length > 0 && (
+                            <Box>
+                                <Text fontSize="sm" fontWeight="bold" mb={2}>
+                                    Latest Opportunity:
+                                </Text>
+                                <Text fontSize="sm" color="gray.600" noOfLines={2}>
+                                    {opportunities[0].opportunity}
+                                </Text>
+                            </Box>
+                        )}
+
                         {research.urls && research.urls.length > 0 && (
                             <Box>
                                 <Text fontSize="sm" fontWeight="bold" mb={2}>
@@ -181,14 +193,18 @@ const ResearchCard = ({ research, onDelete }) => {
 const ResearchList = () => {
     const [researches, setResearches] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
     const toast = useToast();
     const navigate = useNavigate();
 
     const loadResearches = async () => {
+        setIsLoading(true);
+        setError(null);
         try {
             const data = await listResearch();
             setResearches(data);
         } catch (error) {
+            setError(error.message);
             toast({
                 title: 'Error Loading Research',
                 description: error.message,
@@ -248,9 +264,43 @@ const ResearchList = () => {
 
                 {isLoading ? (
                     <Box textAlign="center" py={8}>
-                        <Spinner size="xl" color="purple.500" />
+                        <Spinner size="xl" color="purple.500" thickness="4px" />
+                        <Text mt={4} color="gray.600">Loading research...</Text>
                     </Box>
-                ) : researches.length > 0 ? (
+                ) : error ? (
+                    <Box textAlign="center" py={8}>
+                        <Icon as={FaExclamationCircle} boxSize={10} color="red.500" />
+                        <Text mt={4} color="red.500" fontWeight="bold">Error loading research</Text>
+                        <Text color="gray.600">{error}</Text>
+                        <Button
+                            mt={4}
+                            colorScheme="purple"
+                            onClick={loadResearches}
+                        >
+                            Try Again
+                        </Button>
+                    </Box>
+                ) : researches.length === 0 ? (
+                    <Box
+                        textAlign="center"
+                        py={8}
+                        borderWidth="1px"
+                        borderRadius="lg"
+                        borderStyle="dashed"
+                    >
+                        <Icon as={FaLightbulb} boxSize={10} color="gray.400" />
+                        <Text mt={4} fontWeight="bold">No Research Found</Text>
+                        <Text color="gray.600">Start a new research analysis to get insights</Text>
+                        <Button
+                            as={RouterLink}
+                            to="/marketing-research/new"
+                            colorScheme="purple"
+                            mt={4}
+                        >
+                            Start New Research
+                        </Button>
+                    </Box>
+                ) : (
                     <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
                         {researches.map((research) => (
                             <ResearchCard
@@ -260,19 +310,6 @@ const ResearchList = () => {
                             />
                         ))}
                     </SimpleGrid>
-                ) : (
-                    <Box
-                        p={8}
-                        textAlign="center"
-                        borderWidth="1px"
-                        borderRadius="lg"
-                        borderStyle="dashed"
-                    >
-                        <VStack spacing={4}>
-                            <Icon as={FaLink} boxSize={10} color="gray.400" />
-                            <Text color="gray.500">No research entries found</Text>
-                        </VStack>
-                    </Box>
                 )}
             </VStack>
         </Container>
