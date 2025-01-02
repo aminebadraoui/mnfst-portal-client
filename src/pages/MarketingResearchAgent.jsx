@@ -32,7 +32,7 @@ import {
     createResearch,
     getResearch,
     updateResearchUrls,
-    saveContentAnalysis,
+    saveCommunityAnalysis,
     saveMarketAnalysis
 } from '../services/researchService';
 import MarketingResearchLayout from '../components/MarketingResearchLayout';
@@ -415,7 +415,7 @@ const MarketingResearchAgent = () => {
             });
             setInsights([]); // Clear previous insights at the start
 
-            const response = await fetch(`${api.defaults.baseURL}/analysis/analyze`, {
+            const response = await fetch(`${api.defaults.baseURL}/community-analysis/analyze-insights`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -447,42 +447,55 @@ const MarketingResearchAgent = () => {
                             ...prev,
                             message: eventData.message
                         }));
-                    } else if (eventData.type === 'chunk_insight') {
+                    } else if (eventData.type === 'community_insight') {
                         const insight = eventData.data;
                         const source = insight.source;
 
                         // Store raw insight for saving to database
                         contentInsights.push({
                             source: source,
-                            top_keyword: insight.top_keyword,
+                            pain_point: insight.pain_point,
                             key_insight: insight.key_insight,
-                            key_quote: insight.key_quote
+                            supporting_quote: insight.supporting_quote
                         });
 
-                        // Update keyword map for UI display
-                        const keyword = insight.top_keyword.toLowerCase();
-                        if (!keywordMap.has(keyword)) {
-                            keywordMap.set(keyword, { content: insight.top_keyword, count: 1, sources: [source] });
-                        } else {
-                            const existing = keywordMap.get(keyword);
-                            if (!existing.sources.includes(source)) {
-                                existing.count++;
-                                existing.sources.push(source);
+                        // Extract keywords from pain points and insights
+                        const keywords = [...insight.pain_point.match(/\b\w+\b/g) || [], ...insight.key_insight.match(/\b\w+\b/g) || []];
+                        keywords.forEach(keyword => {
+                            keyword = keyword.toLowerCase();
+                            if (keyword.length > 3) { // Only track keywords longer than 3 characters
+                                if (!keywordMap.has(keyword)) {
+                                    keywordMap.set(keyword, { content: keyword, count: 1, sources: [source] });
+                                } else {
+                                    const existing = keywordMap.get(keyword);
+                                    if (!existing.sources.includes(source)) {
+                                        existing.count++;
+                                        existing.sources.push(source);
+                                    }
+                                }
                             }
-                        }
+                        });
 
-                        // Update UI with insights
+                        // Update UI with insights and keywords
                         setInsights(prev => [
-                            ...prev.filter(i => i.type !== 'keyword'), // Keep non-keyword insights
-                            { type: 'insight', content: insight.key_insight, source },
-                            { type: 'quote', content: insight.key_quote, source },
+                            ...prev.filter(i => i.type !== 'keyword'), // Remove old keywords
+                            {
+                                type: 'insight',
+                                content: insight.key_insight,
+                                pain_point: insight.pain_point,
+                                source: insight.source
+                            },
+                            { type: 'quote', content: insight.supporting_quote, source },
                             // Add updated keywords
-                            ...Array.from(keywordMap.values()).map(k => ({
-                                type: 'keyword',
-                                content: k.content,
-                                count: k.count,
-                                sources: k.sources
-                            }))
+                            ...Array.from(keywordMap.values())
+                                .sort((a, b) => b.count - a.count) // Sort by frequency
+                                .slice(0, 10) // Take top 10 keywords
+                                .map(k => ({
+                                    type: 'keyword',
+                                    content: k.content,
+                                    count: k.count,
+                                    sources: k.sources
+                                }))
                         ]);
 
                         // Update processed URLs count
@@ -505,9 +518,15 @@ const MarketingResearchAgent = () => {
                 }
             }
 
-            // Save content analysis with properly formatted insights
+            // Save community analysis with properly formatted insights
             if (researchId && contentInsights.length > 0) {
-                await saveContentAnalysis(researchId, contentInsights);
+                const formattedInsights = contentInsights.map(insight => ({
+                    source: insight.source,
+                    pain_point: insight.pain_point,
+                    key_insight: insight.key_insight,
+                    supporting_quote: insight.supporting_quote
+                }));
+                await saveCommunityAnalysis(researchId, formattedInsights);
             }
 
             setProcessingStatus(prev => ({ ...prev, isProcessing: false }));
@@ -535,74 +554,59 @@ const MarketingResearchAgent = () => {
 
     const handleMarketAnalysis = async () => {
         try {
-            // First move to Market Opportunities step
             setManualStep(5);
-
-            // Then start the analysis
             setIsAnalyzingMarket(true);
 
+            // Format the request data
             const requestData = {
-                keywords: keywords.filter(k => k.trim() !== ''),  // Filter out empty keywords
-                insights: insights.filter(i => i.type === 'insight').map(i => i.content),
-                quotes: insights.filter(i => i.type === 'quote').map(i => i.content),
+                insights: insights
+                    .filter(i => i.type === 'insight')
+                    .map(i => i.key_insight || i.content),  // Use key_insight if available, fallback to content
+                quotes: insights
+                    .filter(i => i.type === 'quote')
+                    .map(i => i.supporting_quote || i.content),  // Use supporting_quote if available, fallback to content
                 keywords_found: insights
                     .filter(i => i.type === 'keyword')
                     .map(i => i.content)
             };
 
-            console.log('Market Analysis Request:', {
-                keywordsCount: requestData.keywords.length,
-                keywordsFoundCount: requestData.keywords_found.length,
-                insightsCount: requestData.insights.length,
-                quotesCount: requestData.quotes.length,
-                keywords: requestData.keywords,
-                keywordsFound: requestData.keywords_found,
-                insights: requestData.insights,
-                quotes: requestData.quotes
-            });
+            console.log('Market Analysis Request:', requestData);
 
-            const response = await api.post('/analysis/analyze/market-opportunities', requestData);
+            const response = await api.post('/community-analysis/analyze-trends', requestData);
 
-            console.log('Market Analysis Response:', {
-                status: response.status,
-                opportunitiesCount: response.data.opportunities?.length || 0,
-                opportunities: response.data.opportunities
-            });
+            console.log('Market Analysis Response:', response.data);
 
-            setMarketOpportunities(response.data.opportunities || []);
+            // The response contains trends array
+            const opportunities = response.data.trends.map(trend => ({
+                opportunity: trend.trend,
+                pain_points: trend.pain_points,
+                target_market: trend.affected_users,
+                potential_solutions: trend.potential_solutions,
+                supporting_quotes: trend.supporting_quotes
+            }));
+
+            setMarketOpportunities(opportunities);
             setCurrentOpportunityIndex(0);
-
-            console.log('Updated Market Opportunities State:', {
-                totalOpportunities: response.data.opportunities?.length || 0,
-                currentIndex: 0
-            });
 
             toast({
                 title: 'Market Analysis Complete',
-                description: `Found ${response.data.opportunities?.length || 0} market opportunities`,
+                description: `Found ${opportunities.length} market opportunities`,
                 status: 'success',
                 duration: 5000,
                 isClosable: true,
             });
 
-            // After analysis is complete, save opportunities
-            if (researchId && response.data.opportunities) {
-                try {
-                    await saveMarketAnalysis(researchId, response.data.opportunities);
-                } catch (error) {
-                    console.error('Error saving market analysis:', error);
-                }
+            // Save opportunities
+            if (researchId && opportunities.length > 0) {
+                await saveMarketAnalysis(researchId, opportunities);
             }
         } catch (error) {
-            console.error('Market Analysis Error:', {
-                error: error,
-                response: error.response?.data,
-                status: error.response?.status
-            });
-
+            console.error('Market Analysis Error:', error);
             toast({
                 title: 'Market Analysis Failed',
-                description: error.response?.data?.detail || 'Failed to analyze market opportunities',
+                description: typeof error.response?.data?.detail === 'string'
+                    ? error.response.data.detail
+                    : 'Failed to analyze market opportunities',
                 status: 'error',
                 duration: 5000,
                 isClosable: true,

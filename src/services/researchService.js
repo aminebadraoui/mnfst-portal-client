@@ -2,7 +2,7 @@ import api from './api';
 
 export const createResearch = async (name, source) => {
     try {
-        const response = await api.post('/research', {
+        const response = await api.post('/market-research', {
             name,
             source,
             urls: []
@@ -16,7 +16,7 @@ export const createResearch = async (name, source) => {
 
 export const listResearch = async () => {
     try {
-        const response = await api.get('/research');
+        const response = await api.get('/market-research');
         return response.data;
     } catch (error) {
         console.error('Error listing research:', error);
@@ -26,7 +26,7 @@ export const listResearch = async () => {
 
 export const getResearch = async (researchId) => {
     try {
-        const response = await api.get(`/research/${researchId}`);
+        const response = await api.get(`/market-research/${researchId}`);
         return response.data;
     } catch (error) {
         console.error('Error getting research:', error);
@@ -36,7 +36,7 @@ export const getResearch = async (researchId) => {
 
 export const updateResearchUrls = async (researchId, urls) => {
     try {
-        const response = await api.put(`/research/${researchId}/urls`, { urls });
+        const response = await api.put(`/market-research/${researchId}/urls`, { urls });
         return response.data;
     } catch (error) {
         console.error('Error updating research URLs:', error);
@@ -44,19 +44,12 @@ export const updateResearchUrls = async (researchId, urls) => {
     }
 };
 
-export const saveContentAnalysis = async (researchId, insights) => {
+export const saveCommunityAnalysis = async (researchId, insights) => {
     try {
-        const formattedInsights = insights.map(insight => ({
-            source: insight.source,
-            top_keyword: insight.top_keyword,
-            key_insight: insight.key_insight,
-            key_quote: insight.key_quote
-        }));
-
-        const response = await api.post(`/research/${researchId}/content-analysis`, formattedInsights);
+        const response = await api.post(`/market-research/${researchId}/community-analysis`, insights);
         return response.data;
     } catch (error) {
-        console.error('Error saving content analysis:', error);
+        console.error('Error saving community analysis:', error);
         throw error;
     }
 };
@@ -71,7 +64,7 @@ export const saveMarketAnalysis = async (researchId, opportunities) => {
             supporting_quotes: opp.supporting_quotes
         }));
 
-        const response = await api.post(`/research/${researchId}/market-analysis`, formattedOpportunities);
+        const response = await api.post(`/market-research/${researchId}/market-analysis`, formattedOpportunities);
         return response.data;
     } catch (error) {
         console.error('Error saving market analysis:', error);
@@ -81,7 +74,7 @@ export const saveMarketAnalysis = async (researchId, opportunities) => {
 
 export const deleteResearch = async (researchId) => {
     try {
-        const response = await api.delete(`/research/${researchId}`);
+        const response = await api.delete(`/market-research/${researchId}`);
         return response.data;
     } catch (error) {
         throw new Error(error.response?.data?.detail || 'Failed to delete research');

@@ -66,7 +66,7 @@ const DeleteConfirmationDialog = ({ isOpen, onClose, onConfirm, isDeleting }) =>
 };
 
 const ResearchCard = ({ research, onDelete }) => {
-    const insightsCount = research.content_analysis?.insights?.length || 0;
+    const insightsCount = research.community_analysis?.insights?.length || 0;
     const opportunitiesCount = research.market_analysis?.opportunities?.length || 0;
     const { isOpen, onOpen, onClose } = useDisclosure();
     const [isDeleting, setIsDeleting] = useState(false);
