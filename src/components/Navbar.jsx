@@ -270,9 +270,9 @@ const NAV_ITEMS = [
                 href: '/projects',
             },
             {
-                label: 'Market Research',
-                subLabel: 'Analyze market trends and opportunities',
-                href: '/marketing-research',
+                label: 'Community Insights',
+                subLabel: 'Analyze community trends and opportunities',
+                href: '/community-insights',
             },
             {
                 label: 'Competition Intelligence',

@@ -78,7 +78,7 @@ const WizardStep = ({ icon, title, isActive, isCompleted, description, onClick, 
     );
 };
 
-const MarketingResearchLayout = ({ children, currentStep = 1, onStepClick }) => {
+const CommunityInsightsLayout = ({ children, currentStep = 1, onStepClick }) => {
     const navigate = useNavigate();
     const bg = useColorModeValue('gray.50', 'gray.900');
     const sidebarBg = useColorModeValue('white', 'gray.800');
@@ -125,7 +125,7 @@ const MarketingResearchLayout = ({ children, currentStep = 1, onStepClick }) => 
                 top={4}
                 left={4}
                 zIndex={2}
-                onClick={() => navigate('/marketing-research')}
+                onClick={() => navigate('/community-insights')}
             >
                 Back
             </Button>
@@ -150,7 +150,7 @@ const MarketingResearchLayout = ({ children, currentStep = 1, onStepClick }) => 
                         textAlign="center"
                         mb={4}
                     >
-                        Marketing Research
+                        Community Insights
                     </Text>
 
                     <VStack spacing={3} align="stretch">
@@ -178,7 +178,7 @@ const MarketingResearchLayout = ({ children, currentStep = 1, onStepClick }) => 
                                     borderRadius="lg"
                                     role="group"
                                     cursor="pointer"
-                                    onClick={() => navigate('/marketing-research/list')}
+                                    onClick={() => navigate('/community-insights/list')}
                                     bg="green.50"
                                     color="green.600"
                                     borderWidth="1px"
@@ -208,4 +208,4 @@ const MarketingResearchLayout = ({ children, currentStep = 1, onStepClick }) => 
     );
 };
 
-export default MarketingResearchLayout; 
+export default CommunityInsightsLayout; 

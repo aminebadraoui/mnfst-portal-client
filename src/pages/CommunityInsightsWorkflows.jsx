@@ -70,19 +70,19 @@ const WorkflowOption = ({ title, description, icon, to, isDisabled = false }) =>
     );
 };
 
-const MarketingResearchWorkflows = () => {
+const CommunityInsightsWorkflows = () => {
     const options = [
         {
             title: 'Create New Research',
-            description: 'Start a new marketing research analysis to uncover customer insights',
+            description: 'Start a new community insights analysis to uncover customer insights',
             icon: FaPlus,
-            to: '/marketing-research/new',
+            to: '/community-insights/new',
         },
         {
             title: 'View Past Research',
-            description: 'Access and review your previous marketing research analyses',
+            description: 'Access and review your previous community insights analyses',
             icon: FaHistory,
-            to: '/marketing-research/list',
+            to: '/community-insights/list',
             isDisabled: false,
         },
     ];
@@ -91,9 +91,9 @@ const MarketingResearchWorkflows = () => {
         <Container maxW="container.xl" py={8}>
             <VStack spacing={8} align="stretch">
                 <Box>
-                    <Heading size="lg" mb={2}>Marketing Research</Heading>
+                    <Heading size="lg" mb={2}>Community Insights</Heading>
                     <Text color="gray.600">
-                        Choose whether to start a new research analysis or view your past research
+                        Choose whether to start a new insights analysis or view your past research
                     </Text>
                 </Box>
 
@@ -107,4 +107,4 @@ const MarketingResearchWorkflows = () => {
     );
 };
 
-export default MarketingResearchWorkflows; 
+export default CommunityInsightsWorkflows; 

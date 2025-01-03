@@ -18,15 +18,14 @@ import {
     Link,
     Spinner,
     Center,
+    Button,
 } from '@chakra-ui/react';
 import { FaSearch, FaChartLine, FaRobot } from 'react-icons/fa';
 import { Link as RouterLink } from 'react-router-dom';
 import { listResearch } from '../services/researchService';
 
-const AGENT_TYPES = [
-    { id: 'marketing-research', name: 'Marketing Research', icon: FaSearch },
-    { id: 'market-trend', name: 'Market Trend Analyzer', icon: FaChartLine, disabled: true },
-    { id: 'sales-assistant', name: 'AI Sales Assistant', icon: FaRobot, disabled: true },
+const agentTypes = [
+    { id: 'community-insights', name: 'Community Insights', icon: FaSearch },
 ];
 
 const PastRuns = () => {
@@ -40,14 +39,15 @@ const PastRuns = () => {
             setIsLoading(true);
             setError(null);
             try {
-                const marketingResearch = await listResearch();
-                // Transform the research data to match our table structure
-                const transformedRuns = marketingResearch.map(research => ({
+                const communityInsights = await listResearch();
+                console.log('Research:', communityInsights);
+                const transformedRuns = communityInsights.map(research => ({
                     id: research.id,
-                    name: research.name || 'Untitled Research',
-                    type: 'marketing-research',
-                    date: research.created_at,
-                    status: 'completed', // We can add more status types later
+                    name: research.name,
+                    source: research.source,
+                    status: research.status,
+                    createdAt: new Date(research.created_at).toLocaleString(),
+                    updatedAt: new Date(research.updated_at).toLocaleString(),
                 }));
                 setRuns(transformedRuns);
             } catch (err) {
@@ -65,12 +65,12 @@ const PastRuns = () => {
     );
 
     const getAgentIcon = (type) => {
-        const agent = AGENT_TYPES.find(a => a.id === type);
+        const agent = agentTypes.find(a => a.id === type);
         return agent ? agent.icon : FaRobot;
     };
 
     const getAgentName = (type) => {
-        const agent = AGENT_TYPES.find(a => a.id === type);
+        const agent = agentTypes.find(a => a.id === type);
         return agent ? agent.name : type;
     };
 
@@ -113,7 +113,7 @@ const PastRuns = () => {
                             maxW="300px"
                         >
                             <option value="all">All Agents</option>
-                            {AGENT_TYPES.map(agent => (
+                            {agentTypes.map(agent => (
                                 <option
                                     key={agent.id}
                                     value={agent.id}
@@ -146,7 +146,7 @@ const PastRuns = () => {
                                             <Td>
                                                 <Link
                                                     as={RouterLink}
-                                                    to={`/marketing-research/${run.id}`}
+                                                    to={`/community-insights/${run.id}`}
                                                     color="purple.500"
                                                     fontWeight="medium"
                                                     _hover={{ textDecoration: 'none', color: 'purple.600' }}

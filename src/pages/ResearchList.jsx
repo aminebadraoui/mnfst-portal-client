@@ -110,7 +110,7 @@ const ResearchCard = ({ research, onDelete }) => {
                 />
                 <CardBody
                     as={RouterLink}
-                    to={`/marketing-research/${research.id}`}
+                    to={`/community-insights/${research.id}`}
                     pt={12}
                 >
                     <VStack align="stretch" spacing={4}>
@@ -251,14 +251,14 @@ const ResearchList = () => {
                         <Button
                             leftIcon={<FaChevronLeft />}
                             variant="ghost"
-                            onClick={() => navigate('/marketing-research')}
+                            onClick={() => navigate('/community-insights')}
                         >
                             Back
                         </Button>
                     </HStack>
                     <Heading size="lg" mb={2}>Past Research</Heading>
                     <Text color="gray.600">
-                        View and continue your previous marketing research analyses
+                        View and continue your previous community insights analyses
                     </Text>
                 </Box>
 
@@ -293,7 +293,7 @@ const ResearchList = () => {
                         <Text color="gray.600">Start a new research analysis to get insights</Text>
                         <Button
                             as={RouterLink}
-                            to="/marketing-research/new"
+                            to="/community-insights/new"
                             colorScheme="purple"
                             mt={4}
                         >

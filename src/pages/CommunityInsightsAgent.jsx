@@ -38,7 +38,7 @@ import {
     startMarketAnalysis,
     checkTaskStatus
 } from '../services/researchService';
-import MarketingResearchLayout from '../components/MarketingResearchLayout';
+import CommunityInsightsLayout from '../components/CommunityInsightsLayout';
 
 const InsightBox = ({ title, icon, insights = [], count, brandColor }) => (
     <Card h="full" variant="outline" boxShadow="sm" borderColor={brandColor}>
@@ -194,7 +194,7 @@ const EmptyState = ({ icon, title, description }) => (
     </VStack>
 );
 
-const MarketingResearchAgent = () => {
+const CommunityInsightsAgent = () => {
     const [keywords, setKeywords] = useState(['']);
     const [manualUrl, setManualUrl] = useState('');
     const [collectedUrls, setCollectedUrls] = useState([]);
@@ -391,7 +391,7 @@ const MarketingResearchAgent = () => {
                 // Create new research only when we have URLs
                 const research = await createResearch(researchName, selectedSource);
                 setCurrentResearch(research);
-                navigate(`/marketing-research/${research.id}`);
+                navigate(`/community-insights/${research.id}`);
 
                 // Update the URLs after research is created
                 const updated = await updateResearchUrls(research.id, newUrls);
@@ -851,13 +851,13 @@ const MarketingResearchAgent = () => {
     );
 
     return (
-        <MarketingResearchLayout currentStep={getCurrentStep()} onStepClick={handleStepClick}>
+        <CommunityInsightsLayout currentStep={getCurrentStep()} onStepClick={handleStepClick}>
             <Container maxW="container.xl">
                 <VStack spacing={8} align="stretch">
                     <Box>
-                        <Heading size="lg" mb={2}>Marketing Research Agent</Heading>
+                        <Heading size="lg" mb={2}>Community Insights Agent</Heading>
                         <Text color="gray.600">
-                            Research and analyze market opportunities by examining websites and online discussions
+                            Research and analyze community insights by examining websites and online discussions
                         </Text>
                     </Box>
 
@@ -1131,8 +1131,8 @@ const MarketingResearchAgent = () => {
                     )}
                 </VStack>
             </Container>
-        </MarketingResearchLayout>
+        </CommunityInsightsLayout>
     );
 };
 
-export default MarketingResearchAgent; 
+export default CommunityInsightsAgent; 

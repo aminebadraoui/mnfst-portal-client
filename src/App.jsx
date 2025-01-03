@@ -4,8 +4,8 @@ import theme from './theme';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
-import MarketingResearchAgent from './pages/MarketingResearchAgent';
-import MarketingResearchWorkflows from './pages/MarketingResearchWorkflows';
+import CommunityInsightsAgent from './pages/CommunityInsightsAgent';
+import CommunityInsightsWorkflows from './pages/CommunityInsightsWorkflows';
 import ResearchList from './pages/ResearchList';
 import Profile from './pages/Profile';
 import Layout from './components/Layout';
@@ -32,14 +32,14 @@ function App() {
         <Route path="/projects" element={<PrivateRoute><ProjectList /></PrivateRoute>} />
         <Route path="/projects/:projectId" element={<PrivateRoute><ProjectDetail /></PrivateRoute>} />
         <Route path="/projects/:projectId/community-insights" element={<PrivateRoute><CommunityInsights /></PrivateRoute>} />
-        <Route path="/projects/:projectId/competition" element={<PrivateRoute><MarketingResearchAgent /></PrivateRoute>} />
-        <Route path="/projects/:projectId/avatars" element={<PrivateRoute><MarketingResearchAgent /></PrivateRoute>} />
-        <Route path="/projects/:projectId/ad-scripts" element={<PrivateRoute><MarketingResearchAgent /></PrivateRoute>} />
+        <Route path="/projects/:projectId/competition" element={<PrivateRoute><CommunityInsightsAgent /></PrivateRoute>} />
+        <Route path="/projects/:projectId/avatars" element={<PrivateRoute><CommunityInsightsAgent /></PrivateRoute>} />
+        <Route path="/projects/:projectId/ad-scripts" element={<PrivateRoute><CommunityInsightsAgent /></PrivateRoute>} />
         <Route path="/past-runs" element={<PrivateRoute><PastRuns /></PrivateRoute>} />
-        <Route path="/marketing-research" element={<PrivateRoute><MarketingResearchWorkflows /></PrivateRoute>} />
-        <Route path="/marketing-research/list" element={<PrivateRoute><ResearchList /></PrivateRoute>} />
-        <Route path="/marketing-research/new" element={<PrivateRoute><MarketingResearchAgent /></PrivateRoute>} />
-        <Route path="/marketing-research/:researchId" element={<PrivateRoute><MarketingResearchAgent /></PrivateRoute>} />
+        <Route path="/community-insights" element={<PrivateRoute><CommunityInsightsWorkflows /></PrivateRoute>} />
+        <Route path="/community-insights/list" element={<PrivateRoute><ResearchList /></PrivateRoute>} />
+        <Route path="/community-insights/new" element={<PrivateRoute><CommunityInsightsAgent /></PrivateRoute>} />
+        <Route path="/community-insights/:researchId" element={<PrivateRoute><CommunityInsightsAgent /></PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
         <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
       </Routes>
