@@ -11,6 +11,7 @@ import Profile from './pages/Profile';
 import Layout from './components/Layout';
 import ProjectList from './pages/ProjectList';
 import ProjectDetail from './pages/ProjectDetail';
+import CommunityInsights from './pages/CommunityInsights';
 import PastRuns from './pages/PastRuns';
 import { useAuthStore } from './store/authStore';
 
@@ -30,7 +31,7 @@ function App() {
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/projects" element={<PrivateRoute><ProjectList /></PrivateRoute>} />
         <Route path="/projects/:projectId" element={<PrivateRoute><ProjectDetail /></PrivateRoute>} />
-        <Route path="/projects/:projectId/market-research" element={<PrivateRoute><MarketingResearchAgent /></PrivateRoute>} />
+        <Route path="/projects/:projectId/community-insights" element={<PrivateRoute><CommunityInsights /></PrivateRoute>} />
         <Route path="/projects/:projectId/competition" element={<PrivateRoute><MarketingResearchAgent /></PrivateRoute>} />
         <Route path="/projects/:projectId/avatars" element={<PrivateRoute><MarketingResearchAgent /></PrivateRoute>} />
         <Route path="/projects/:projectId/ad-scripts" element={<PrivateRoute><MarketingResearchAgent /></PrivateRoute>} />

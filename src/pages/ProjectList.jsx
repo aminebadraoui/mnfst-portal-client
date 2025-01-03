@@ -121,6 +121,15 @@ const ProjectCard = ({ project, onDelete }) => {
                     >
                         Ad Scripts
                     </Button>
+                    <Button
+                        as={RouterLink}
+                        to={`/projects/${project.id}/community-insights`}
+                        variant="ghost"
+                        leftIcon={<Icon as={FaSearch} />}
+                        size="sm"
+                    >
+                        Community Insights
+                    </Button>
                 </SimpleGrid>
             </VStack>
         </Box>

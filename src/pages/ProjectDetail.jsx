@@ -63,9 +63,9 @@ const ProjectDetail = () => {
     const menuItems = [
         {
             icon: FaSearch,
-            title: 'Market Research',
-            description: 'Analyze market opportunities and gather customer insights',
-            to: `/projects/${projectId}/market-research`,
+            title: 'Community Insights',
+            description: 'Analyze community discussions to uncover valuable insights and opportunities',
+            to: `/projects/${projectId}/community-insights`,
         },
         {
             icon: FaChartBar,
