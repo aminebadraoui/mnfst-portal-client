@@ -9,6 +9,9 @@ import MarketingResearchWorkflows from './pages/MarketingResearchWorkflows';
 import ResearchList from './pages/ResearchList';
 import Profile from './pages/Profile';
 import Layout from './components/Layout';
+import ProjectList from './pages/ProjectList';
+import ProjectDetail from './pages/ProjectDetail';
+import PastRuns from './pages/PastRuns';
 import { useAuthStore } from './store/authStore';
 
 const PrivateRoute = ({ children }) => {
@@ -25,6 +28,13 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+        <Route path="/projects" element={<PrivateRoute><ProjectList /></PrivateRoute>} />
+        <Route path="/projects/:projectId" element={<PrivateRoute><ProjectDetail /></PrivateRoute>} />
+        <Route path="/projects/:projectId/market-research" element={<PrivateRoute><MarketingResearchAgent /></PrivateRoute>} />
+        <Route path="/projects/:projectId/competition" element={<PrivateRoute><MarketingResearchAgent /></PrivateRoute>} />
+        <Route path="/projects/:projectId/avatars" element={<PrivateRoute><MarketingResearchAgent /></PrivateRoute>} />
+        <Route path="/projects/:projectId/ad-scripts" element={<PrivateRoute><MarketingResearchAgent /></PrivateRoute>} />
+        <Route path="/past-runs" element={<PrivateRoute><PastRuns /></PrivateRoute>} />
         <Route path="/marketing-research" element={<PrivateRoute><MarketingResearchWorkflows /></PrivateRoute>} />
         <Route path="/marketing-research/list" element={<PrivateRoute><ResearchList /></PrivateRoute>} />
         <Route path="/marketing-research/new" element={<PrivateRoute><MarketingResearchAgent /></PrivateRoute>} />

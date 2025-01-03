@@ -8,17 +8,17 @@ import {
     VStack,
     Container,
 } from '@chakra-ui/react'
-import { FaSearchDollar, FaChartLine, FaRobot } from 'react-icons/fa'
+import { FaSearchDollar } from 'react-icons/fa'
 import { Link } from 'react-router-dom'
 
-const AgentCard = ({ title, description, icon, to, isComingSoon = false }) => {
+const AgentCard = ({ title, description, icon, to }) => {
     const bg = useColorModeValue('white', 'gray.800')
     const borderColor = useColorModeValue('gray.200', 'gray.700')
     const hoverBg = useColorModeValue('gray.50', 'gray.700')
 
     return (
         <Box
-            as={!isComingSoon ? Link : 'div'}
+            as={Link}
             to={to}
             p={6}
             bg={bg}
@@ -26,14 +26,13 @@ const AgentCard = ({ title, description, icon, to, isComingSoon = false }) => {
             borderColor={borderColor}
             borderRadius="xl"
             transition="all 0.3s"
-            cursor={isComingSoon ? 'default' : 'pointer'}
-            position="relative"
-            _hover={!isComingSoon ? {
+            cursor="pointer"
+            _hover={{
                 transform: 'translateY(-4px)',
                 shadow: 'lg',
                 bg: hoverBg,
                 borderColor: 'brand.500',
-            } : {}}
+            }}
         >
             <VStack spacing={4} align="flex-start">
                 <Icon
@@ -45,22 +44,6 @@ const AgentCard = ({ title, description, icon, to, isComingSoon = false }) => {
                 <Text color="gray.600" fontSize="sm">
                     {description}
                 </Text>
-                {isComingSoon && (
-                    <Text
-                        position="absolute"
-                        top={4}
-                        right={4}
-                        bg="brand.500"
-                        color="white"
-                        px={2}
-                        py={1}
-                        borderRadius="md"
-                        fontSize="xs"
-                        fontWeight="bold"
-                    >
-                        Coming Soon
-                    </Text>
-                )}
             </VStack>
         </Box>
     )
@@ -73,18 +56,6 @@ const Dashboard = () => {
             description: 'Analyze websites and conversations to uncover marketing opportunities, customer insights, and business ideas.',
             icon: FaSearchDollar,
             to: '/marketing-research',
-        },
-        {
-            title: 'Market Trend Analyzer',
-            description: 'Track and analyze market trends, consumer behavior, and competition insights.',
-            icon: FaChartLine,
-            isComingSoon: true,
-        },
-        {
-            title: 'AI Sales Assistant',
-            description: 'Generate personalized sales pitches and follow-up strategies.',
-            icon: FaRobot,
-            isComingSoon: true,
         },
     ]
 

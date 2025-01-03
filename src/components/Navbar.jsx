@@ -261,24 +261,39 @@ const NAV_ITEMS = [
         href: '/dashboard',
     },
     {
-        label: 'AI Tools',
+        label: 'Projects',
+        href: '/projects',
         children: [
             {
-                label: 'Marketing Research Agent',
-                subLabel: 'Research and analyze market opportunities',
+                label: 'All Projects',
+                subLabel: 'View and manage your projects',
+                href: '/projects',
+            },
+            {
+                label: 'Market Research',
+                subLabel: 'Analyze market trends and opportunities',
                 href: '/marketing-research',
             },
             {
-                label: 'Market Trend Analyzer',
-                subLabel: 'Coming Soon - Track market trends and consumer behavior',
-                href: '#',
+                label: 'Competition Intelligence',
+                subLabel: 'Track and analyze competitors',
+                href: '/competition',
             },
             {
-                label: 'AI Sales Assistant',
-                subLabel: 'Coming Soon - Generate sales pitches and strategies',
-                href: '#',
+                label: 'Avatars',
+                subLabel: 'Manage customer personas',
+                href: '/avatars',
+            },
+            {
+                label: 'Ad Scripts',
+                subLabel: 'Create and manage ad campaigns',
+                href: '/ad-scripts',
             },
         ],
+    },
+    {
+        label: 'Profile',
+        href: '/profile',
     },
 ]
 
