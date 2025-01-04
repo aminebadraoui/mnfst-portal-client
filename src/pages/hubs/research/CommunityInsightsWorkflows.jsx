@@ -1,3 +1,4 @@
+import React from 'react';
 import {
     Box,
     Button,
@@ -11,6 +12,8 @@ import {
 } from '@chakra-ui/react';
 import { FaHistory, FaPlus } from 'react-icons/fa';
 import { Link as RouterLink } from 'react-router-dom';
+import useProjectStore from "../../../store/projectStore";
+import CommunityInsightsLayout from '../../../components/CommunityInsightsLayout';
 
 const WorkflowOption = ({ title, description, icon, to, isDisabled = false }) => {
     const bg = useColorModeValue('white', 'gray.800');

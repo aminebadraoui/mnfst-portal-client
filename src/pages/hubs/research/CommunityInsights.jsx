@@ -22,10 +22,12 @@ import {
     Divider,
     SimpleGrid,
     IconButton,
+    useToast,
 } from '@chakra-ui/react';
 import { FaExclamationCircle, FaQuestionCircle, FaChartLine, FaLightbulb, FaSearch, FaExternalLinkAlt, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { useParams } from 'react-router-dom';
-import useProjectStore from '../store/projectStore';
+import api from '../../../services/api';
+import useProjectStore from "../../../store/projectStore";
 
 const InsightCard = ({ evidence, source, engagement, frequency, correlation, significance, keyword }) => {
     const borderColor = useColorModeValue('gray.200', 'gray.700');
@@ -244,13 +246,31 @@ const CommunityInsights = () => {
     const { projectId } = useParams();
     const project = useProjectStore(state => state.projects.find(p => p.id === projectId));
     const [isLoading, setIsLoading] = useState(false);
+    const toast = useToast();
 
     const handleGenerateInsights = async () => {
         setIsLoading(true);
-        // TODO: Implement API call to generate insights
-        setTimeout(() => {
+        try {
+            const response = await api.post(`/projects/${projectId}/insights/generate`);
+            // Handle the response
+            toast({
+                title: "Insights Generated",
+                description: "New insights have been generated for your project",
+                status: "success",
+                duration: 5000,
+                isClosable: true,
+            });
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: error.message || "Failed to generate insights",
+                status: "error",
+                duration: 5000,
+                isClosable: true,
+            });
+        } finally {
             setIsLoading(false);
-        }, 2000);
+        }
     };
 
     // Sample data based on the provided response

@@ -26,19 +26,10 @@ import {
     ListItem,
 } from '@chakra-ui/react';
 import { FaPlus, FaTrash, FaKeyboard, FaLightbulb, FaQuoteRight, FaReddit, FaChartLine, FaBookmark, FaChevronLeft, FaChevronRight, FaAmazon, FaYoutube, FaSearch, FaLink, FaHistory, FaEdit, FaGlobe, FaTwitter, FaFacebook, FaShoppingCart, FaFileAlt } from 'react-icons/fa';
-import api from '../services/api';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
-import {
-    createResearch,
-    getResearch,
-    updateResearchUrls,
-    saveCommunityAnalysis,
-    saveMarketAnalysis,
-    startAnalysis,
-    startMarketAnalysis,
-    checkTaskStatus
-} from '../services/researchService';
-import CommunityInsightsLayout from '../components/CommunityInsightsLayout';
+import api from '../../../services/api';
+import useProjectStore from "../../../store/projectStore";
+import CommunityInsightsLayout from '../../../components/CommunityInsightsLayout';
 
 const InsightBox = ({ title, icon, insights = [], count, brandColor }) => (
     <Card h="full" variant="outline" boxShadow="sm" borderColor={brandColor}>
@@ -224,7 +215,8 @@ const CommunityInsightsAgent = () => {
         const loadResearch = async () => {
             if (researchId) {
                 try {
-                    const research = await getResearch(researchId);
+                    const response = await api.get(`/research/${researchId}`);
+                    const research = response.data;
                     console.log('Loaded research:', research);
                     setCurrentResearch(research);
 

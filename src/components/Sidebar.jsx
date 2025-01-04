@@ -25,10 +25,9 @@ import {
     FaChevronDown,
     FaChevronRight,
     FaSearch,
-    FaChartBar,
-    FaUsers,
-    FaAd,
-    FaRobot
+    FaPencilAlt,
+    FaComments,
+    FaChartLine,
 } from 'react-icons/fa';
 import { useAuthStore } from '../store/authStore';
 import ProjectsModal from './ProjectsModal';
@@ -93,11 +92,10 @@ const NavItem = ({ icon, children, to, onClick, indent = false, isHeader = false
 const ProjectFeatures = ({ projectId }) => {
     const location = useLocation();
     const features = [
-        { name: 'Community Insights', icon: FaSearch, path: 'community-insights' },
-        { name: 'Competition', icon: FaChartBar, path: 'competition' },
-        { name: 'Avatars', icon: FaUsers, path: 'avatars' },
-        { name: 'Ad Scripts', icon: FaAd, path: 'ad-scripts' },
-        { name: 'Chatbots', icon: FaRobot, path: 'chatbots' },
+        { name: 'Research Hub', icon: FaSearch, path: 'research', color: 'blue' },
+        { name: 'Content Hub', icon: FaPencilAlt, path: 'content', color: 'green' },
+        { name: 'Communication Hub', icon: FaComments, path: 'communication', color: 'purple' },
+        { name: 'Strategy Hub', icon: FaChartLine, path: 'strategy', color: 'orange' },
     ];
 
     return (

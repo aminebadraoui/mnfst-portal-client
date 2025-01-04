@@ -12,7 +12,7 @@ import {
     HStack,
     useToast,
 } from '@chakra-ui/react';
-import { FaPlus, FaSearch, FaUsers, FaAd, FaChartBar, FaTrash, FaRobot, FaProjectDiagram } from 'react-icons/fa';
+import { FaPlus, FaSearch, FaUsers, FaAd, FaChartBar, FaTrash, FaRobot, FaProjectDiagram, FaPencilAlt, FaComments, FaChartLine } from 'react-icons/fa';
 import ProjectsModal from '../components/ProjectsModal';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import useProjectStore from '../store/projectStore';
@@ -94,26 +94,43 @@ const ProjectCard = ({ project, onDelete }) => {
                 <HStack spacing={2} flexWrap="wrap" onClick={handleLinkClick}>
                     <Button
                         as={RouterLink}
-                        to={`/projects/${project.id}/community-insights`}
+                        to={`/projects/${project.id}/research`}
                         variant="outline"
                         leftIcon={<Icon as={FaSearch} />}
                         size="sm"
                         borderRadius="full"
-                        borderColor="purple.200"
-                        color="purple.500"
-                        bg="purple.50"
+                        borderColor="blue.200"
+                        color="blue.500"
+                        bg="blue.50"
                         _hover={{
-                            bg: 'purple.100',
-                            borderColor: 'purple.500',
+                            bg: 'blue.100',
+                            borderColor: 'blue.500',
                         }}
                     >
-                        Community Insights
+                        Research Hub
                     </Button>
                     <Button
                         as={RouterLink}
-                        to={`/projects/${project.id}/competition`}
+                        to={`/projects/${project.id}/content`}
                         variant="outline"
-                        leftIcon={<Icon as={FaChartBar} />}
+                        leftIcon={<Icon as={FaPencilAlt} />}
+                        size="sm"
+                        borderRadius="full"
+                        borderColor="green.200"
+                        color="green.500"
+                        bg="green.50"
+                        _hover={{
+                            bg: 'green.100',
+                            borderColor: 'green.500',
+                        }}
+                    >
+                        Content Hub
+                    </Button>
+                    <Button
+                        as={RouterLink}
+                        to={`/projects/${project.id}/communication`}
+                        variant="outline"
+                        leftIcon={<Icon as={FaComments} />}
                         size="sm"
                         borderRadius="full"
                         borderColor="purple.200"
@@ -124,58 +141,24 @@ const ProjectCard = ({ project, onDelete }) => {
                             borderColor: 'purple.500',
                         }}
                     >
-                        Competition
+                        Communication Hub
                     </Button>
                     <Button
                         as={RouterLink}
-                        to={`/projects/${project.id}/avatars`}
+                        to={`/projects/${project.id}/strategy`}
                         variant="outline"
-                        leftIcon={<Icon as={FaUsers} />}
+                        leftIcon={<Icon as={FaChartLine} />}
                         size="sm"
                         borderRadius="full"
-                        borderColor="purple.200"
-                        color="purple.500"
-                        bg="purple.50"
+                        borderColor="orange.200"
+                        color="orange.500"
+                        bg="orange.50"
                         _hover={{
-                            bg: 'purple.100',
-                            borderColor: 'purple.500',
+                            bg: 'orange.100',
+                            borderColor: 'orange.500',
                         }}
                     >
-                        Avatars
-                    </Button>
-                    <Button
-                        as={RouterLink}
-                        to={`/projects/${project.id}/ad-scripts`}
-                        variant="outline"
-                        leftIcon={<Icon as={FaAd} />}
-                        size="sm"
-                        borderRadius="full"
-                        borderColor="purple.200"
-                        color="purple.500"
-                        bg="purple.50"
-                        _hover={{
-                            bg: 'purple.100',
-                            borderColor: 'purple.500',
-                        }}
-                    >
-                        Ad Scripts
-                    </Button>
-                    <Button
-                        as={RouterLink}
-                        to={`/projects/${project.id}/chatbots`}
-                        variant="outline"
-                        leftIcon={<Icon as={FaRobot} />}
-                        size="sm"
-                        borderRadius="full"
-                        borderColor="purple.200"
-                        color="purple.500"
-                        bg="purple.50"
-                        _hover={{
-                            bg: 'purple.100',
-                            borderColor: 'purple.500',
-                        }}
-                    >
-                        Chatbots
+                        Strategy Hub
                     </Button>
                 </HStack>
             </VStack>
