@@ -1,14 +1,13 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import ProjectDetail from '../pages/ProjectDetail';
-import ResearchHub from '../pages/hubs/ResearchHub';
+import ResearchHub from '../pages/hubs/research/ResearchHub';
 import ContentHub from '../pages/hubs/ContentHub';
 import CommunicationHub from '../pages/hubs/CommunicationHub';
 import StrategyHub from '../pages/hubs/StrategyHub';
 
 // Research Hub Components
 import CommunityInsights from '../pages/hubs/research/CommunityInsights';
-import Competition from '../pages/hubs/research/Competition';
 
 // Content Hub Components
 import Avatars from '../pages/hubs/content/Avatars';
@@ -48,7 +47,6 @@ const ProjectRoutes = () => {
             <Route path="research">
                 <Route index element={<ResearchHub />} />
                 <Route path="community-insights" element={<CommunityInsights />} />
-                <Route path="competition-intelligence" element={<Competition />} />
             </Route>
 
             {/* Content Hub Routes */}

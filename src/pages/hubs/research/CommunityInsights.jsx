@@ -23,8 +23,20 @@ import {
     SimpleGrid,
     IconButton,
     useToast,
+    Grid,
+    GridItem,
+    Modal,
+    ModalOverlay,
+    ModalContent,
+    ModalHeader,
+    ModalBody,
+    ModalCloseButton,
+    FormControl,
+    FormLabel,
+    Switch,
+    FormHelperText,
 } from '@chakra-ui/react';
-import { FaExclamationCircle, FaQuestionCircle, FaChartLine, FaLightbulb, FaSearch, FaExternalLinkAlt, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaExclamationCircle, FaQuestionCircle, FaChartLine, FaLightbulb, FaSearch, FaExternalLinkAlt, FaChevronLeft, FaChevronRight, FaChartBar, FaBuilding, FaPlus, FaTrash } from 'react-icons/fa';
 import { useParams } from 'react-router-dom';
 import api from '../../../services/api';
 import useProjectStore from "../../../store/projectStore";
@@ -47,16 +59,30 @@ const InsightCard = ({ evidence, source, engagement, frequency, correlation, sig
             height="320px"
             display="flex"
             flexDirection="column"
+            overflow="hidden"
         >
-            <VStack align="stretch" flex={1} spacing={3}>
+            <VStack align="stretch" flex={1} spacing={3} h="full">
                 <HStack justify="flex-end">
                     <Badge colorScheme={keyword === 'joint pain' ? 'purple' : 'blue'} fontSize="xs">
                         {keyword}
                     </Badge>
                 </HStack>
 
-                <Box flex={1}>
-                    <Text color="gray.600" fontSize="sm" fontStyle="italic" noOfLines={3}>"{evidence}"</Text>
+                <Box flex={1} overflowY="auto" css={{
+                    '&::-webkit-scrollbar': {
+                        width: '4px',
+                    },
+                    '&::-webkit-scrollbar-track': {
+                        width: '6px',
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                        background: 'gray.200',
+                        borderRadius: '24px',
+                    },
+                }}>
+                    <Text color="gray.600" fontSize="sm" fontStyle="italic" whiteSpace="pre-wrap">
+                        "{evidence}"
+                    </Text>
                 </Box>
 
                 <VStack spacing={3} align="stretch">
@@ -75,13 +101,13 @@ const InsightCard = ({ evidence, source, engagement, frequency, correlation, sig
 
                     <VStack align="stretch" spacing={2} fontSize="sm">
                         {frequency && (
-                            <Text noOfLines={1}><strong>Frequency:</strong> {frequency}</Text>
+                            <Text whiteSpace="pre-wrap"><strong>Frequency:</strong> {frequency}</Text>
                         )}
                         {correlation && (
-                            <Text noOfLines={1}><strong>Correlation:</strong> {correlation}</Text>
+                            <Text whiteSpace="pre-wrap"><strong>Correlation:</strong> {correlation}</Text>
                         )}
                         {significance && (
-                            <Text noOfLines={2}><strong>Significance:</strong> {significance}</Text>
+                            <Text whiteSpace="pre-wrap"><strong>Significance:</strong> {significance}</Text>
                         )}
                     </VStack>
                 </VStack>
@@ -242,17 +268,137 @@ const InsightSection = ({ title, icon, insights = [] }) => {
     );
 };
 
+const CompetitionSection = () => {
+    const bg = useColorModeValue('white', 'gray.800');
+    const borderColor = useColorModeValue('gray.200', 'gray.700');
+
+    return (
+        <Box
+            borderWidth="1px"
+            borderColor={borderColor}
+            borderRadius="lg"
+            p={6}
+            bg={bg}
+            mt={8}
+        >
+            <VStack spacing={6} align="stretch">
+                <HStack spacing={4}>
+                    <Icon as={FaBuilding} boxSize={6} color="blue.500" />
+                    <Heading size="md">Competition Intelligence</Heading>
+                </HStack>
+
+                <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={6}>
+                    <GridItem>
+                        <VStack
+                            p={6}
+                            bg={useColorModeValue('gray.50', 'gray.700')}
+                            borderRadius="md"
+                            align="stretch"
+                            spacing={4}
+                        >
+                            <HStack>
+                                <Icon as={FaChartBar} color="purple.500" />
+                                <Text fontWeight="semibold">Market Analysis</Text>
+                            </HStack>
+                            <Text color="gray.600" fontSize="sm">
+                                Track market trends and analyze competitor strategies
+                            </Text>
+                            <Button
+                                leftIcon={<FaSearch />}
+                                colorScheme="purple"
+                                variant="outline"
+                                size="sm"
+                            >
+                                Start Analysis
+                            </Button>
+                        </VStack>
+                    </GridItem>
+
+                    <GridItem>
+                        <VStack
+                            p={6}
+                            bg={useColorModeValue('gray.50', 'gray.700')}
+                            borderRadius="md"
+                            align="stretch"
+                            spacing={4}
+                        >
+                            <HStack>
+                                <Icon as={FaChartLine} color="green.500" />
+                                <Text fontWeight="semibold">Performance Tracking</Text>
+                            </HStack>
+                            <Text color="gray.600" fontSize="sm">
+                                Monitor competitor performance metrics and benchmarks
+                            </Text>
+                            <Button
+                                leftIcon={<FaChartLine />}
+                                colorScheme="green"
+                                variant="outline"
+                                size="sm"
+                            >
+                                View Metrics
+                            </Button>
+                        </VStack>
+                    </GridItem>
+                </Grid>
+            </VStack>
+        </Box>
+    );
+};
+
 const CommunityInsights = () => {
     const { projectId } = useParams();
     const project = useProjectStore(state => state.projects.find(p => p.id === projectId));
     const [isLoading, setIsLoading] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [topicKeyword, setTopicKeyword] = useState('');
+    const [sourceUrls, setSourceUrls] = useState(['']);
+    const [productUrls, setProductUrls] = useState(['']);
+    const [useOnlySpecifiedSources, setUseOnlySpecifiedSources] = useState(false);
     const toast = useToast();
+
+    const handleAddUrl = (type) => {
+        if (type === 'source') {
+            setSourceUrls([...sourceUrls, '']);
+        } else {
+            setProductUrls([...productUrls, '']);
+        }
+    };
+
+    const handleRemoveUrl = (type, index) => {
+        if (type === 'source') {
+            setSourceUrls(sourceUrls.filter((_, i) => i !== index));
+        } else {
+            setProductUrls(productUrls.filter((_, i) => i !== index));
+        }
+    };
+
+    const handleUrlChange = (type, index, value) => {
+        if (type === 'source') {
+            const newUrls = [...sourceUrls];
+            newUrls[index] = value;
+            setSourceUrls(newUrls);
+        } else {
+            const newUrls = [...productUrls];
+            newUrls[index] = value;
+            setProductUrls(newUrls);
+        }
+    };
 
     const handleGenerateInsights = async () => {
         setIsLoading(true);
         try {
-            const response = await api.post(`/projects/${projectId}/insights/generate`);
-            // Handle the response
+            // Filter out empty URLs
+            const filteredSourceUrls = sourceUrls.filter(url => url.trim());
+            const filteredProductUrls = productUrls.filter(url => url.trim());
+
+            const response = await api.post(`/community-insights`, {
+                topic_keyword: topicKeyword || undefined,
+                source_urls: filteredSourceUrls.length > 0 ? filteredSourceUrls : undefined,
+                product_urls: filteredProductUrls.length > 0 ? filteredProductUrls : undefined,
+                use_only_specified_sources: useOnlySpecifiedSources,
+            });
+
+            setIsModalOpen(false);
             toast({
                 title: "Insights Generated",
                 description: "New insights have been generated for your project",
@@ -348,76 +494,6 @@ const CommunityInsights = () => {
                     correlation: 'Related to discussions about medical gaslighting',
                     significance: 'Highlights issues with pain validation in healthcare settings',
                     keyword: 'back pain'
-                },
-                {
-                    title: 'Recurring sources of anger',
-                    evidence: 'Three different doctors, three different diagnoses for my neck.',
-                    source: 'https://www.reddit.com/r/ChronicPain/comments/neck_diagnosis/',
-                    engagement: '175 upvotes / 45 comments',
-                    frequency: 'Common in diagnostic experience discussions',
-                    correlation: 'Related to healthcare system navigation challenges',
-                    significance: 'Indicates issues with diagnostic consistency',
-                    keyword: 'neck pain'
-                },
-                {
-                    title: 'Recurring sources of anger',
-                    evidence: 'Insurance won\'t cover the treatment that actually helps my shoulder.',
-                    source: 'https://www.reddit.com/r/ChronicPain/comments/shoulder_insurance/',
-                    engagement: '195 upvotes / 60 comments',
-                    frequency: 'Frequent in insurance coverage discussions',
-                    correlation: 'Links to healthcare access and affordability',
-                    significance: 'Highlights barriers to effective treatment access',
-                    keyword: 'shoulder pain'
-                },
-                {
-                    title: 'Recurring sources of anger',
-                    evidence: 'Physical therapy copays are making me choose between treatment and groceries.',
-                    source: 'https://www.reddit.com/r/ChronicPain/comments/knee_pt_cost/',
-                    engagement: '230 upvotes / 70 comments',
-                    frequency: 'Common in treatment cost discussions',
-                    correlation: 'Strong links to financial burden of chronic pain',
-                    significance: 'Demonstrates economic impact of ongoing treatment',
-                    keyword: 'knee pain'
-                },
-                {
-                    title: 'Hidden/normalized frustrations',
-                    evidence: 'I\'ve just learned to live with it; it\'s my new normal.',
-                    source: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC7690206/',
-                    engagement: '120 upvotes / 25 comments',
-                    frequency: 'A recurring theme in personal narratives',
-                    correlation: 'Tied to discussions about mental health impacts of chronic conditions',
-                    significance: 'Indicates a potential barrier to seeking further treatment',
-                    keyword: 'joint pain'
-                },
-                {
-                    title: 'Indirect expressions of dissatisfaction',
-                    evidence: 'Oh great, another day of pretending my knees don\'t hurt!',
-                    source: 'https://www.reddit.com/r/rheumatoid/comments/16p06n1/anyone_have_joint_pain/',
-                    engagement: '90 upvotes / 15 comments',
-                    frequency: 'Common in light-hearted threads',
-                    correlation: 'Related to coping mechanisms discussed in mental health contexts',
-                    significance: 'Suggests a need for more serious engagement with underlying issues',
-                    keyword: 'joint pain'
-                },
-                {
-                    title: 'Cascade effects of problems',
-                    evidence: 'My knee pain keeps me from going out, which makes me feel more depressed.',
-                    source: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC10785940/',
-                    engagement: '180 upvotes / 50 comments',
-                    frequency: 'Frequently noted in personal stories',
-                    correlation: 'Links with discussions on mental health and lifestyle changes',
-                    significance: 'Emphasizes the interconnectedness of physical and mental health',
-                    keyword: 'joint pain'
-                },
-                {
-                    title: 'Time patterns in complaint posting',
-                    evidence: 'Every winter, my joints feel like they\'re on fire.',
-                    source: 'https://www.healthdirect.gov.au/joint-pain-and-swelling',
-                    engagement: '75 upvotes / 10 comments',
-                    frequency: 'Seasonal trend observed over two years',
-                    correlation: 'Related to weather discussions impacting joint health',
-                    significance: 'Highlights the need for seasonal awareness in treatment approaches',
-                    keyword: 'joint pain'
                 }
             ]
         },
@@ -464,36 +540,6 @@ const CommunityInsights = () => {
                     correlation: 'Related to skepticism towards alternative medicine approaches',
                     significance: 'Highlights the divide between traditional and alternative medicine perspectives',
                     keyword: 'joint pain'
-                },
-                {
-                    title: 'Most repeated recommendations',
-                    evidence: 'Physical therapy made a world of difference for me.',
-                    source: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC10785940/',
-                    engagement: '160 upvotes / 45 comments',
-                    frequency: 'Frequently mentioned across various forums',
-                    correlation: 'Links with discussions on rehabilitation strategies for chronic conditions',
-                    significance: 'Suggests a community consensus on the value of professional guidance',
-                    keyword: 'joint pain'
-                },
-                {
-                    title: 'Success stories with details',
-                    evidence: 'After switching to an anti-inflammatory diet, my pain decreased dramatically!',
-                    source: 'https://www.healthdirect.gov.au/joint-pain-and-swelling',
-                    engagement: '200 upvotes / 50 comments',
-                    frequency: 'Occasional but impactful narratives shared by users',
-                    correlation: 'Related to dietary discussions and their effects on inflammation',
-                    significance: 'Provides hope and practical examples for others struggling with similar issues',
-                    keyword: 'joint pain'
-                },
-                {
-                    title: 'Failure patterns with context',
-                    evidence: 'I tried X medication but it did nothing for my pain.',
-                    source: 'https://www.reddit.com/r/rheumatoid/comments/16p06n1/anyone_have_joint_pain/',
-                    engagement: '120 upvotes / 30 comments',
-                    frequency: 'Commonly reported experiences among users seeking solutions',
-                    correlation: 'Links with broader dissatisfaction regarding medical treatments available',
-                    significance: 'Indicates a gap in effective treatment options available for chronic joint pain',
-                    keyword: 'joint pain'
                 }
             ]
         },
@@ -529,46 +575,6 @@ const CommunityInsights = () => {
                     frequency: 'Notable increase observed over the last year',
                     correlation: 'Related to broader societal mental health trends during COVID-19',
                     significance: 'Indicates an evolving understanding of the interplay between physical and mental health',
-                    keyword: 'joint pain'
-                },
-                {
-                    title: 'Non-obvious correlations between problems',
-                    evidence: 'My joints hurt more when my stomach is upset.',
-                    source: 'https://www.reddit.com/r/CrohnsDisease/comments/16p06n1/anyone_have_joint_pain/',
-                    engagement: '110 upvotes / 25 comments',
-                    frequency: 'Occasionally noted but significant when mentioned',
-                    correlation: 'Links with discussions on conditions like Crohn\'s disease',
-                    significance: 'Highlights the need for holistic approaches in treatment plans',
-                    keyword: 'joint pain'
-                },
-                {
-                    title: 'Counter-intuitive success patterns',
-                    evidence: 'Acupuncture has been my saving grace, even if I was doubtful at first.',
-                    source: 'https://www.reddit.com/r/rheumatoid/comments/16p06n1/anyone_have_joint_pain/',
-                    engagement: '130 upvotes / 30 comments',
-                    frequency: 'Occasionally mentioned but positively impactful',
-                    correlation: 'Contrasts with mainstream medical advice focusing solely on pharmaceuticals',
-                    significance: 'Suggests potential benefits from exploring alternative therapies',
-                    keyword: 'joint pain'
-                },
-                {
-                    title: 'Secondary effects users don\'t recognize',
-                    evidence: 'I didn\'t realize how much poor sleep affected my joints until I changed my routine.',
-                    source: 'https://www.healthdirect.gov.au/joint-pain-and-swelling',
-                    engagement: '90 upvotes / 15 comments',
-                    frequency: 'Rarely acknowledged but crucial when discussed',
-                    correlation: 'Links with broader conversations about sleep hygiene',
-                    significance: 'Encourages consideration of lifestyle factors beyond immediate symptoms',
-                    keyword: 'joint pain'
-                },
-                {
-                    title: 'Unexpected relationships between issues',
-                    evidence: 'When I\'m stressed, my knees flare up worse than usual.',
-                    source: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC7690206/',
-                    engagement: '140 upvotes / 40 comments',
-                    frequency: 'Noted by several users across different threads',
-                    correlation: 'Ties into discussions about stress management techniques',
-                    significance: 'Highlights the importance of addressing psychological factors in managing physical health',
                     keyword: 'joint pain'
                 }
             ]
@@ -606,26 +612,62 @@ const CommunityInsights = () => {
                     correlation: 'Ties into themes of community building and support networks',
                     significance: 'Highlights the role of community support in coping with chronic conditions',
                     keyword: 'joint pain'
+                }
+            ]
+        },
+        {
+            title: 'Main Competitors',
+            icon: FaBuilding,
+            insights: [
+                {
+                    title: 'Market Leaders',
+                    evidence: 'Company X has captured 45% of the market share in pain relief products.',
+                    source: 'https://www.marketreport.com/healthcare-2023',
+                    engagement: '180 mentions / 40 reviews',
+                    frequency: 'Dominant player in market discussions',
+                    correlation: 'Strong presence in professional healthcare channels',
+                    significance: 'Sets pricing and distribution standards for the industry',
+                    keyword: 'market leader'
                 },
                 {
-                    title: 'Common misconceptions',
-                    evidence: 'I thought all arthritis was just old age; I didn\'t know there were different types.',
-                    source: 'https://www.healthdirect.gov.au/joint-pain-and-swelling',
-                    engagement: '100 upvotes / 20 comments',
-                    frequency: 'Regularly encountered misconceptions within forums',
-                    correlation: 'Links with educational resources shared among users',
-                    significance: 'Indicates a need for better public education regarding arthritis types and treatments',
-                    keyword: 'joint pain'
+                    title: 'Emerging Competitors',
+                    evidence: 'Startup Y is disrupting the market with their new natural formula.',
+                    source: 'https://www.techcrunch.com/healthcare-startups',
+                    engagement: '220 upvotes / 55 comments',
+                    frequency: 'Growing presence in natural health communities',
+                    correlation: 'Popular among younger demographic',
+                    significance: 'Indicates shift towards natural alternatives',
+                    keyword: 'natural products'
                 },
                 {
-                    title: 'Unmet needs and gaps',
-                    evidence: 'There\'s nothing out there for someone my age dealing with this.',
-                    source: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC7690206/',
-                    engagement: '140 upvotes / 35 comments',
-                    frequency: 'Frequently mentioned by younger users',
-                    correlation: 'Related to age-specific healthcare resources and support',
-                    significance: 'Highlights a demographic gap in support services for young adults',
-                    keyword: 'joint pain'
+                    title: 'Customer Sentiment',
+                    evidence: 'Customers consistently rate Brand Z higher for customer service.',
+                    source: 'https://www.trustpilot.com/reviews',
+                    engagement: '150 reviews / 4.5 average rating',
+                    frequency: 'Monthly trend in customer feedback',
+                    correlation: 'Strong correlation with brand loyalty',
+                    significance: 'Highlights importance of customer support',
+                    keyword: 'customer service'
+                },
+                {
+                    title: 'Market Leaders',
+                    evidence: 'Traditional pharma companies still dominate prescription pain medication market.',
+                    source: 'https://www.pharmainsights.com/market-share-2023',
+                    engagement: '200 mentions / 50 reviews',
+                    frequency: 'Consistently mentioned in industry reports',
+                    correlation: 'Strong ties to healthcare provider preferences',
+                    significance: 'Indicates barriers to entry for new competitors',
+                    keyword: 'market share'
+                },
+                {
+                    title: 'Emerging Competitors',
+                    evidence: 'New CBD-based products gaining traction in alternative medicine space.',
+                    source: 'https://www.healthtech.com/cbd-market-analysis',
+                    engagement: '250 upvotes / 60 comments',
+                    frequency: 'Increasing mentions in wellness communities',
+                    correlation: 'Links to growing interest in natural alternatives',
+                    significance: 'Suggests shifting market preferences',
+                    keyword: 'alternative medicine'
                 }
             ]
         }
@@ -642,25 +684,139 @@ const CommunityInsights = () => {
     return (
         <Container maxW="container.xl" py={8}>
             <VStack spacing={8} align="stretch">
-                <HStack justify="space-between" align="center">
-                    <Box>
-                        <Heading size="lg" mb={2}>Community Insights</Heading>
-                        <Text color="gray.600">
-                            Analyze and understand community discussions to uncover valuable insights for {project.name}
-                        </Text>
-                    </Box>
-                    <Button
-                        colorScheme="purple"
-                        size="lg"
-                        onClick={handleGenerateInsights}
-                        isLoading={isLoading}
-                        leftIcon={<Icon as={FaSearch} />}
-                    >
-                        Generate Insights
-                    </Button>
-                </HStack>
+                <Box>
+                    <Heading size="lg" mb={2}>Community Insights</Heading>
+                    <Text color="gray.600">
+                        Analyze and understand community discussions to uncover valuable insights for {project?.name}
+                    </Text>
+                </Box>
 
-                <Accordion allowToggle defaultIndex={[0]}>
+                <Button
+                    leftIcon={<Icon as={FaSearch} />}
+                    colorScheme="purple"
+                    size="lg"
+                    onClick={() => setIsModalOpen(true)}
+                >
+                    Generate Insights
+                </Button>
+
+                <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} size="xl">
+                    <ModalOverlay />
+                    <ModalContent>
+                        <ModalHeader>Generate Community Insights</ModalHeader>
+                        <ModalCloseButton />
+                        <ModalBody pb={6}>
+                            <VStack spacing={4}>
+                                <FormControl isRequired>
+                                    <FormLabel>Topic Keyword</FormLabel>
+                                    <Input
+                                        placeholder="Enter a topic to focus the analysis"
+                                        value={topicKeyword}
+                                        onChange={(e) => setTopicKeyword(e.target.value)}
+                                    />
+                                </FormControl>
+
+                                <FormControl>
+                                    <FormLabel>Source URLs (Optional)</FormLabel>
+                                    <VStack spacing={2} align="stretch">
+                                        {sourceUrls.map((url, index) => (
+                                            <HStack key={index}>
+                                                <Input
+                                                    placeholder="Enter URL to analyze"
+                                                    value={url}
+                                                    onChange={(e) => handleUrlChange('source', index, e.target.value)}
+                                                />
+                                                {sourceUrls.length > 1 && (
+                                                    <IconButton
+                                                        icon={<FaTrash />}
+                                                        onClick={() => handleRemoveUrl('source', index)}
+                                                        aria-label="Remove URL"
+                                                        colorScheme="red"
+                                                        variant="ghost"
+                                                    />
+                                                )}
+                                            </HStack>
+                                        ))}
+                                        <Button
+                                            leftIcon={<FaPlus />}
+                                            onClick={() => handleAddUrl('source')}
+                                            size="sm"
+                                            variant="ghost"
+                                            colorScheme="purple"
+                                        >
+                                            Add Another URL
+                                        </Button>
+                                    </VStack>
+                                </FormControl>
+
+                                <FormControl>
+                                    <FormLabel>Product URLs (Optional)</FormLabel>
+                                    <VStack spacing={2} align="stretch">
+                                        {productUrls.map((url, index) => (
+                                            <HStack key={index}>
+                                                <Input
+                                                    placeholder="Enter product URL to reference"
+                                                    value={url}
+                                                    onChange={(e) => handleUrlChange('product', index, e.target.value)}
+                                                />
+                                                {productUrls.length > 1 && (
+                                                    <IconButton
+                                                        icon={<FaTrash />}
+                                                        onClick={() => handleRemoveUrl('product', index)}
+                                                        aria-label="Remove URL"
+                                                        colorScheme="red"
+                                                        variant="ghost"
+                                                    />
+                                                )}
+                                            </HStack>
+                                        ))}
+                                        <Button
+                                            leftIcon={<FaPlus />}
+                                            onClick={() => handleAddUrl('product')}
+                                            size="sm"
+                                            variant="ghost"
+                                            colorScheme="purple"
+                                        >
+                                            Add Another URL
+                                        </Button>
+                                    </VStack>
+                                </FormControl>
+
+                                {(sourceUrls.some(url => url.trim()) || productUrls.some(url => url.trim())) && (
+                                    <FormControl display="flex" alignItems="center">
+                                        <FormLabel htmlFor="use-only-specified-sources" mb="0">
+                                            Use only specified URLs
+                                        </FormLabel>
+                                        <Switch
+                                            id="use-only-specified-sources"
+                                            isChecked={useOnlySpecifiedSources}
+                                            onChange={(e) => setUseOnlySpecifiedSources(e.target.checked)}
+                                            colorScheme="purple"
+                                        />
+                                        <FormHelperText ml={2}>
+                                            {useOnlySpecifiedSources ?
+                                                "AI will analyze only the URLs you provided" :
+                                                "AI will search through additional relevant sources"
+                                            }
+                                        </FormHelperText>
+                                    </FormControl>
+                                )}
+
+                                <Button
+                                    colorScheme="purple"
+                                    width="full"
+                                    onClick={handleGenerateInsights}
+                                    isLoading={isLoading}
+                                    isDisabled={!topicKeyword.trim()}
+                                >
+                                    Generate
+                                </Button>
+                            </VStack>
+                        </ModalBody>
+                    </ModalContent>
+                </Modal>
+
+                <Accordion allowToggle>
                     {sections.map((section, index) => (
                         <InsightSection
                             key={index}

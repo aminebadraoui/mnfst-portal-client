@@ -12,7 +12,7 @@ import {
     useDisclosure,
     Collapse,
 } from '@chakra-ui/react';
-import { Link as RouterLink, useLocation } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import {
     FaHome,
     FaUser,
@@ -116,7 +116,8 @@ const ProjectFeatures = ({ projectId }) => {
 };
 
 const Sidebar = () => {
-    const logout = useAuthStore((state) => state.logout);
+    const clearAuth = useAuthStore((state) => state.clearAuth);
+    const navigate = useNavigate();
     const bg = useColorModeValue('white', 'gray.800');
     const borderColor = useColorModeValue('gray.200', 'gray.700');
     const { isOpen, onOpen, onClose } = useDisclosure();
@@ -133,7 +134,8 @@ const Sidebar = () => {
     }, [location.pathname]);
 
     const handleLogout = () => {
-        logout();
+        clearAuth();
+        navigate('/login');
     };
 
     const handleProjectClick = (projectId) => {
