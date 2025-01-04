@@ -12,19 +12,21 @@ import {
     HStack,
     useToast,
 } from '@chakra-ui/react';
-import { FaPlus, FaSearch, FaUsers, FaAd, FaChartBar, FaTrash } from 'react-icons/fa';
+import { FaPlus, FaSearch, FaUsers, FaAd, FaChartBar, FaTrash, FaRobot, FaProjectDiagram } from 'react-icons/fa';
 import ProjectsModal from '../components/ProjectsModal';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import useProjectStore from '../store/projectStore';
+import DeleteProjectModal from '../components/DeleteProjectModal';
+import Feature from '../components/Feature';
 
 const ProjectCard = ({ project, onDelete }) => {
     const toast = useToast();
     const navigate = useNavigate();
+    const { isOpen, onOpen, onClose } = useDisclosure();
 
-    const handleDelete = (e) => {
-        e.stopPropagation();
+    const handleDelete = async (projectId) => {
         try {
-            onDelete(project.id);
+            await onDelete(projectId);
             toast({
                 title: 'Project deleted',
                 description: 'Project has been deleted successfully',
@@ -35,7 +37,7 @@ const ProjectCard = ({ project, onDelete }) => {
         } catch (error) {
             toast({
                 title: 'Error',
-                description: 'Failed to delete project',
+                description: error.message || 'Failed to delete project',
                 status: 'error',
                 duration: 3000,
                 isClosable: true,
@@ -48,7 +50,12 @@ const ProjectCard = ({ project, onDelete }) => {
     };
 
     const handleLinkClick = (e) => {
-        e.stopPropagation(); // Prevent card navigation when clicking links
+        e.stopPropagation();
+    };
+
+    const handleDeleteClick = (e) => {
+        e.stopPropagation();
+        onOpen();
     };
 
     return (
@@ -73,7 +80,7 @@ const ProjectCard = ({ project, onDelete }) => {
                 size="sm"
                 colorScheme="red"
                 variant="ghost"
-                onClick={handleDelete}
+                onClick={handleDeleteClick}
             >
                 <Icon as={FaTrash} />
             </Button>
@@ -84,54 +91,101 @@ const ProjectCard = ({ project, onDelete }) => {
                     {project.description}
                 </Text>
 
-                <SimpleGrid columns={2} spacing={4} onClick={handleLinkClick}>
+                <HStack spacing={2} flexWrap="wrap" onClick={handleLinkClick}>
                     <Button
                         as={RouterLink}
-                        to={`/projects/${project.id}/market-research`}
-                        variant="ghost"
+                        to={`/projects/${project.id}/community-insights`}
+                        variant="outline"
                         leftIcon={<Icon as={FaSearch} />}
                         size="sm"
+                        borderRadius="full"
+                        borderColor="purple.200"
+                        color="purple.500"
+                        bg="purple.50"
+                        _hover={{
+                            bg: 'purple.100',
+                            borderColor: 'purple.500',
+                        }}
                     >
-                        Market Research
+                        Community Insights
                     </Button>
                     <Button
                         as={RouterLink}
                         to={`/projects/${project.id}/competition`}
-                        variant="ghost"
+                        variant="outline"
                         leftIcon={<Icon as={FaChartBar} />}
                         size="sm"
+                        borderRadius="full"
+                        borderColor="purple.200"
+                        color="purple.500"
+                        bg="purple.50"
+                        _hover={{
+                            bg: 'purple.100',
+                            borderColor: 'purple.500',
+                        }}
                     >
                         Competition
                     </Button>
                     <Button
                         as={RouterLink}
                         to={`/projects/${project.id}/avatars`}
-                        variant="ghost"
+                        variant="outline"
                         leftIcon={<Icon as={FaUsers} />}
                         size="sm"
+                        borderRadius="full"
+                        borderColor="purple.200"
+                        color="purple.500"
+                        bg="purple.50"
+                        _hover={{
+                            bg: 'purple.100',
+                            borderColor: 'purple.500',
+                        }}
                     >
                         Avatars
                     </Button>
                     <Button
                         as={RouterLink}
                         to={`/projects/${project.id}/ad-scripts`}
-                        variant="ghost"
+                        variant="outline"
                         leftIcon={<Icon as={FaAd} />}
                         size="sm"
+                        borderRadius="full"
+                        borderColor="purple.200"
+                        color="purple.500"
+                        bg="purple.50"
+                        _hover={{
+                            bg: 'purple.100',
+                            borderColor: 'purple.500',
+                        }}
                     >
                         Ad Scripts
                     </Button>
                     <Button
                         as={RouterLink}
-                        to={`/projects/${project.id}/community-insights`}
-                        variant="ghost"
-                        leftIcon={<Icon as={FaSearch} />}
+                        to={`/projects/${project.id}/chatbots`}
+                        variant="outline"
+                        leftIcon={<Icon as={FaRobot} />}
                         size="sm"
+                        borderRadius="full"
+                        borderColor="purple.200"
+                        color="purple.500"
+                        bg="purple.50"
+                        _hover={{
+                            bg: 'purple.100',
+                            borderColor: 'purple.500',
+                        }}
                     >
-                        Community Insights
+                        Chatbots
                     </Button>
-                </SimpleGrid>
+                </HStack>
             </VStack>
+
+            <DeleteProjectModal
+                isOpen={isOpen}
+                onClose={onClose}
+                project={project}
+                onDelete={handleDelete}
+            />
         </Box>
     );
 };
@@ -139,33 +193,152 @@ const ProjectCard = ({ project, onDelete }) => {
 const ProjectList = () => {
     const { isOpen, onOpen, onClose } = useDisclosure();
     const projects = useProjectStore((state) => state.projects);
+    const isLoading = useProjectStore((state) => state.isLoading);
+    const error = useProjectStore((state) => state.error);
+    const fetchProjects = useProjectStore((state) => state.fetchProjects);
     const deleteProject = useProjectStore((state) => state.deleteProject);
+    const toast = useToast();
+
+    React.useEffect(() => {
+        const loadProjects = async () => {
+            try {
+                await fetchProjects();
+            } catch (error) {
+                toast({
+                    title: 'Error',
+                    description: error.message || 'Failed to load projects',
+                    status: 'error',
+                    duration: 5000,
+                    isClosable: true,
+                });
+            }
+        };
+        loadProjects();
+    }, [fetchProjects, toast]);
+
+    if (isLoading) {
+        return (
+            <Container maxW="container.xl" py={8}>
+                <VStack spacing={8} align="stretch">
+                    <HStack justify="space-between">
+                        <Heading size="lg">Projects</Heading>
+                        <Button
+                            leftIcon={<FaPlus />}
+                            colorScheme="purple"
+                            onClick={onOpen}
+                            isLoading={isLoading}
+                        >
+                            New Project
+                        </Button>
+                    </HStack>
+                    <Box textAlign="center" py={8}>
+                        Loading projects...
+                    </Box>
+                </VStack>
+            </Container>
+        );
+    }
+
+    if (error) {
+        return (
+            <Container maxW="container.xl" py={8}>
+                <VStack spacing={8} align="stretch">
+                    <HStack justify="space-between">
+                        <Heading size="lg">Projects</Heading>
+                        <Button
+                            leftIcon={<FaPlus />}
+                            colorScheme="purple"
+                            onClick={onOpen}
+                        >
+                            New Project
+                        </Button>
+                    </HStack>
+                    <Box textAlign="center" py={8} color="red.500">
+                        Error: {error}
+                    </Box>
+                </VStack>
+            </Container>
+        );
+    }
 
     return (
         <Container maxW="container.xl" py={8}>
             <VStack spacing={8} align="stretch">
                 <HStack justify="space-between">
                     <Heading size="lg">Projects</Heading>
-                    <Button
-                        leftIcon={<FaPlus />}
-                        colorScheme="purple"
-                        onClick={onOpen}
-                    >
-                        New Project
-                    </Button>
+                    {projects.length > 0 && (
+                        <Button
+                            leftIcon={<FaPlus />}
+                            colorScheme="purple"
+                            onClick={onOpen}
+                        >
+                            New Project
+                        </Button>
+                    )}
                 </HStack>
 
                 {projects.length === 0 ? (
                     <Box
                         textAlign="center"
-                        py={8}
-                        borderWidth="1px"
-                        borderRadius="lg"
+                        py={16}
+                        px={8}
+                        borderWidth="2px"
+                        borderRadius="xl"
                         borderStyle="dashed"
+                        borderColor="purple.200"
+                        bg="white"
+                        maxW="3xl"
+                        mx="auto"
                     >
-                        <Text color="gray.600">
-                            No projects yet. Create your first project to get started.
-                        </Text>
+                        <VStack spacing={6}>
+                            <Icon
+                                as={FaProjectDiagram}
+                                boxSize={16}
+                                color="purple.400"
+                            />
+                            <VStack spacing={3}>
+                                <Heading size="lg" color="gray.700">
+                                    Welcome to MNFST Lab!
+                                </Heading>
+                                <Text fontSize="lg" color="gray.600" maxW="xl">
+                                    Create your first project to start exploring insights, managing chatbots,
+                                    and building your digital presence.
+                                </Text>
+                            </VStack>
+                            <Box>
+                                <Button
+                                    leftIcon={<FaPlus />}
+                                    colorScheme="purple"
+                                    size="lg"
+                                    onClick={onOpen}
+                                    px={8}
+                                >
+                                    Create Your First Project
+                                </Button>
+                            </Box>
+                            <SimpleGrid columns={{ base: 1, md: 2 }} spacing={6} pt={8} maxW="2xl">
+                                <Feature
+                                    icon={FaSearch}
+                                    title="Community Insights"
+                                    description="Analyze online discussions to uncover valuable insights and opportunities"
+                                />
+                                <Feature
+                                    icon={FaRobot}
+                                    title="AI Chatbots"
+                                    description="Create and customize chatbots to engage with your audience"
+                                />
+                                <Feature
+                                    icon={FaUsers}
+                                    title="Customer Avatars"
+                                    description="Build detailed personas to understand your target audience"
+                                />
+                                <Feature
+                                    icon={FaAd}
+                                    title="Ad Scripts"
+                                    description="Generate compelling ad content optimized for your audience"
+                                />
+                            </SimpleGrid>
+                        </VStack>
                     </Box>
                 ) : (
                     <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>

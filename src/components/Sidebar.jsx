@@ -10,62 +10,110 @@ import {
     useColorModeValue,
     HStack,
     useDisclosure,
+    Collapse,
 } from '@chakra-ui/react';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
-import { FaHome, FaUser, FaSignOutAlt, FaProjectDiagram, FaPlus, FaHistory, FaSearchDollar, FaFolder } from 'react-icons/fa';
+import {
+    FaHome,
+    FaUser,
+    FaSignOutAlt,
+    FaProjectDiagram,
+    FaPlus,
+    FaHistory,
+    FaSearchDollar,
+    FaFolder,
+    FaChevronDown,
+    FaChevronRight,
+    FaSearch,
+    FaChartBar,
+    FaUsers,
+    FaAd,
+    FaRobot
+} from 'react-icons/fa';
 import { useAuthStore } from '../store/authStore';
 import ProjectsModal from './ProjectsModal';
 import useProjectStore from '../store/projectStore';
 
-const NavItem = ({ icon, children, to, onClick, rightElement, indent = false, isHeader = false }) => {
+const NavItem = ({ icon, children, to, onClick, indent = false, isHeader = false, rightElement, isActive = false, isExpanded = false, onToggle, isFeature = false }) => {
+    const bg = useColorModeValue('gray.100', 'gray.700');
     const location = useLocation();
-    const isActive = location.pathname === to;
-    const activeBg = useColorModeValue('purple.50', 'purple.800');
-    const hoverBg = useColorModeValue('gray.100', 'gray.700');
+    const isCurrentPath = to && location.pathname.startsWith(to);
+    const featureColor = useColorModeValue('gray.600', 'gray.400');
+    const projectColor = useColorModeValue('gray.700', 'gray.200');
 
     return (
         <Flex
             as={to ? RouterLink : 'div'}
             to={to}
-            onClick={onClick}
             align="center"
-            p="4"
-            pl={indent ? "8" : "4"}
-            mx="4"
-            borderRadius="lg"
-            role="group"
-            cursor={to || onClick ? "pointer" : "default"}
-            bg={isActive ? activeBg : 'transparent'}
-            color={isActive ? 'purple.500' : isHeader ? 'gray.500' : 'inherit'}
+            px={isFeature ? "8" : indent ? "6" : "4"}
+            py={isFeature ? "1.5" : "2"}
+            cursor="pointer"
+            color={isActive || isCurrentPath
+                ? "purple.500"
+                : isFeature
+                    ? featureColor
+                    : isHeader
+                        ? projectColor
+                        : "gray.700"}
+            bg={isActive || isCurrentPath ? "purple.50" : "transparent"}
             _hover={{
-                bg: (to || onClick) ? hoverBg : 'transparent',
-                color: (to || onClick) ? 'purple.500' : isHeader ? 'gray.500' : 'inherit',
+                bg: isFeature ? 'purple.50' : bg,
+                color: "purple.500",
             }}
-            fontWeight={isActive ? "bold" : isHeader ? "medium" : "normal"}
+            onClick={onClick}
+            role="group"
+            borderLeft={isFeature ? "1px" : "0"}
+            borderLeftColor={isActive || isCurrentPath ? "purple.500" : "transparent"}
+            fontSize={isFeature ? "sm" : "md"}
+            fontWeight={isHeader ? "semibold" : isFeature ? "normal" : "medium"}
         >
-            <HStack width="100%" justify="space-between">
-                <HStack>
-                    {icon && (
-                        <Icon
-                            fontSize="16"
-                            as={icon}
-                            color={isActive ? 'purple.500' : isHeader ? 'gray.500' : 'inherit'}
-                            _groupHover={{
-                                color: (to || onClick) ? 'purple.500' : isHeader ? 'gray.500' : 'inherit',
-                            }}
-                        />
-                    )}
-                    <Text
-                        _groupHover={{
-                            color: (to || onClick) ? 'purple.500' : isHeader ? 'gray.500' : 'inherit',
-                        }}
-                    >
-                        {children}
-                    </Text>
-                </HStack>
-                {rightElement}
-            </HStack>
+            <Icon
+                as={icon}
+                mr="3"
+                fontSize={isFeature ? "14" : "16"}
+                color={isActive || isCurrentPath ? "purple.500" : "inherit"}
+            />
+            <Text flex="1">{children}</Text>
+            {rightElement && (
+                <Box ml="2">{rightElement}</Box>
+            )}
+            {onToggle && (
+                <Icon
+                    as={isExpanded ? FaChevronDown : FaChevronRight}
+                    ml="2"
+                    fontSize="12"
+                    transition="all 0.2s"
+                />
+            )}
         </Flex>
+    );
+};
+
+const ProjectFeatures = ({ projectId }) => {
+    const location = useLocation();
+    const features = [
+        { name: 'Community Insights', icon: FaSearch, path: 'community-insights' },
+        { name: 'Competition', icon: FaChartBar, path: 'competition' },
+        { name: 'Avatars', icon: FaUsers, path: 'avatars' },
+        { name: 'Ad Scripts', icon: FaAd, path: 'ad-scripts' },
+        { name: 'Chatbots', icon: FaRobot, path: 'chatbots' },
+    ];
+
+    return (
+        <VStack spacing={0.5} align="stretch" mt={0.5} mb={1}>
+            {features.map((feature) => (
+                <NavItem
+                    key={feature.path}
+                    icon={feature.icon}
+                    to={`/projects/${projectId}/${feature.path}`}
+                    isActive={location.pathname.includes(feature.path)}
+                    isFeature={true}
+                >
+                    {feature.name}
+                </NavItem>
+            ))}
+        </VStack>
     );
 };
 
@@ -75,9 +123,27 @@ const Sidebar = () => {
     const borderColor = useColorModeValue('gray.200', 'gray.700');
     const { isOpen, onOpen, onClose } = useDisclosure();
     const projects = useProjectStore((state) => state.projects);
+    const location = useLocation();
+    const [expandedProject, setExpandedProject] = React.useState(null);
+
+    // Find current project from URL if we're in a project route
+    React.useEffect(() => {
+        const match = location.pathname.match(/\/projects\/([^/]+)/);
+        if (match) {
+            setExpandedProject(match[1]);
+        }
+    }, [location.pathname]);
 
     const handleLogout = () => {
         logout();
+    };
+
+    const handleProjectClick = (projectId) => {
+        if (expandedProject === projectId) {
+            setExpandedProject(null);
+        } else {
+            setExpandedProject(projectId);
+        }
     };
 
     return (
@@ -104,9 +170,6 @@ const Sidebar = () => {
                 </Text>
 
                 <VStack spacing={2} align="stretch">
-                    <NavItem icon={FaHome} to="/dashboard">
-                        Agents Dashboard
-                    </NavItem>
                     <NavItem
                         icon={FaProjectDiagram}
                         to="/projects"
@@ -130,15 +193,26 @@ const Sidebar = () => {
                         Projects
                     </NavItem>
                     {projects.map((project) => (
-                        <NavItem
-                            key={project.id}
-                            icon={FaFolder}
-                            to={`/projects/${project.id}`}
-                            indent={true}
-                        >
-                            {project.name}
-                        </NavItem>
+                        <React.Fragment key={project.id}>
+                            <NavItem
+                                icon={FaFolder}
+                                to={`/projects/${project.id}`}
+                                indent={true}
+                                isActive={expandedProject === project.id}
+                                onToggle={() => handleProjectClick(project.id)}
+                                isExpanded={expandedProject === project.id}
+                                onClick={() => handleProjectClick(project.id)}
+                            >
+                                {project.name}
+                            </NavItem>
+                            <Collapse in={expandedProject === project.id}>
+                                <ProjectFeatures projectId={project.id} />
+                            </Collapse>
+                        </React.Fragment>
                     ))}
+                    <NavItem icon={FaHome} to="/dashboard">
+                        Agents Dashboard
+                    </NavItem>
                     <NavItem
                         icon={FaHistory}
                         to="/past-runs"

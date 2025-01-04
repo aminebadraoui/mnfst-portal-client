@@ -38,9 +38,8 @@ const ProjectsModal = ({ isOpen, onClose }) => {
             return;
         }
 
-        setIsLoading(true);
         try {
-            addProject({ name, description });
+            await addProject({ name, description });
             toast({
                 title: 'Project created.',
                 description: 'Your new project has been created successfully.',
@@ -54,13 +53,11 @@ const ProjectsModal = ({ isOpen, onClose }) => {
         } catch (error) {
             toast({
                 title: 'Error creating project.',
-                description: error.message,
+                description: error.message || 'Failed to create project',
                 status: 'error',
                 duration: 5000,
                 isClosable: true,
             });
-        } finally {
-            setIsLoading(false);
         }
     };
 

@@ -14,6 +14,10 @@ import ProjectDetail from './pages/ProjectDetail';
 import CommunityInsights from './pages/CommunityInsights';
 import PastRuns from './pages/PastRuns';
 import { useAuthStore } from './store/authStore';
+import Competition from './pages/Competition';
+import Avatars from './pages/Avatars';
+import AdScripts from './pages/AdScripts';
+import Chatbots from './pages/Chatbots';
 
 const PrivateRoute = ({ children }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -32,9 +36,10 @@ function App() {
         <Route path="/projects" element={<PrivateRoute><ProjectList /></PrivateRoute>} />
         <Route path="/projects/:projectId" element={<PrivateRoute><ProjectDetail /></PrivateRoute>} />
         <Route path="/projects/:projectId/community-insights" element={<PrivateRoute><CommunityInsights /></PrivateRoute>} />
-        <Route path="/projects/:projectId/competition" element={<PrivateRoute><CommunityInsightsAgent /></PrivateRoute>} />
-        <Route path="/projects/:projectId/avatars" element={<PrivateRoute><CommunityInsightsAgent /></PrivateRoute>} />
-        <Route path="/projects/:projectId/ad-scripts" element={<PrivateRoute><CommunityInsightsAgent /></PrivateRoute>} />
+        <Route path="/projects/:projectId/competition" element={<PrivateRoute><Competition /></PrivateRoute>} />
+        <Route path="/projects/:projectId/avatars" element={<PrivateRoute><Avatars /></PrivateRoute>} />
+        <Route path="/projects/:projectId/ad-scripts" element={<PrivateRoute><AdScripts /></PrivateRoute>} />
+        <Route path="/projects/:projectId/chatbots" element={<PrivateRoute><Chatbots /></PrivateRoute>} />
         <Route path="/past-runs" element={<PrivateRoute><PastRuns /></PrivateRoute>} />
         <Route path="/community-insights" element={<PrivateRoute><CommunityInsightsWorkflows /></PrivateRoute>} />
         <Route path="/community-insights/list" element={<PrivateRoute><ResearchList /></PrivateRoute>} />

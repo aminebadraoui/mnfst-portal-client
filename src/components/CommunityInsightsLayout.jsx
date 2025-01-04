@@ -86,34 +86,24 @@ const CommunityInsightsLayout = ({ children, currentStep = 1, onStepClick }) => 
 
     const steps = [
         {
-            icon: FaEdit,
-            title: 'Name Research',
-            description: 'Give your research a meaningful name'
-        },
-        {
-            icon: FaGlobe,
-            title: 'Select Source',
-            description: 'Choose one source to gather data from'
-        },
-        {
             icon: FaSearch,
-            title: 'Research Keywords',
-            description: 'Enter keywords to find relevant content'
+            title: 'Query',
+            description: 'Enter your search query'
         },
         {
             icon: FaFileAlt,
-            title: 'Content Analysis',
-            description: 'Analyze gathered content for insights'
+            title: 'Insights',
+            description: 'View generated insights'
         },
         {
-            icon: FaBullseye,
-            title: 'Market Opportunities',
-            description: 'Discover potential market opportunities'
-        },
+            icon: FaEdit,
+            title: 'Name Research',
+            description: 'Save your research with a meaningful name'
+        }
     ];
 
     // The highest step the user has reached
-    const highestStep = Math.max(currentStep, steps.length);
+    const highestStep = steps.length; // Allow navigation to all steps
 
     return (
         <Box minH="100vh" bg={bg}>

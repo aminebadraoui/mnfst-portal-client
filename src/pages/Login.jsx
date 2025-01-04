@@ -9,8 +9,10 @@ import {
     VStack,
     Heading,
     useToast,
+    Text,
+    Link,
 } from '@chakra-ui/react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import api from '../services/api';
 import { useAuthStore } from '../store/authStore';
 
@@ -86,6 +88,12 @@ const Login = () => {
                             >
                                 Login
                             </Button>
+                            <Text pt={2}>
+                                Don't have an account?{' '}
+                                <Link as={RouterLink} to="/register" color="blue.500">
+                                    Register here
+                                </Link>
+                            </Text>
                         </VStack>
                     </form>
                 </Box>

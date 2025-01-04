@@ -289,6 +289,11 @@ const NAV_ITEMS = [
                 subLabel: 'Create and manage ad campaigns',
                 href: '/ad-scripts',
             },
+            {
+                label: 'Chatbots',
+                subLabel: 'Create and customize AI chatbots',
+                href: '/chatbots',
+            },
         ],
     },
     {
