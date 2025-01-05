@@ -1,3 +1,4 @@
+import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ChakraProvider } from '@chakra-ui/react';
 import theme from './theme';
@@ -10,6 +11,8 @@ import ProjectList from './pages/ProjectList';
 import PastRuns from './pages/PastRuns';
 import { useAuthStore } from './store/authStore';
 import ProjectRoutes from './routes/projectRoutes';
+import GlobalLoadingBanner from './components/GlobalLoadingBanner';
+import useLoadingStore from './store/loadingStore';
 
 const PrivateRoute = ({ children }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -18,9 +21,11 @@ const PrivateRoute = ({ children }) => {
 
 function App() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const { isLoading, keyword } = useLoadingStore();
 
   return (
     <ChakraProvider theme={theme}>
+      <GlobalLoadingBanner isVisible={isLoading} keyword={keyword} />
       <Routes>
         {/* Auth Routes */}
         <Route path="/login" element={<Login />} />

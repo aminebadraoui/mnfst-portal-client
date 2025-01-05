@@ -12,7 +12,7 @@ const getInitialState = () => {
     }
 }
 
-const useAuthStore = create((set) => ({
+export const useAuthStore = create((set) => ({
     ...getInitialState(),
 
     setAuth: (token, user) => {
@@ -38,6 +38,4 @@ const useAuthStore = create((set) => ({
             user: null,
         })
     },
-}))
-
-export { useAuthStore } 
+})) 
