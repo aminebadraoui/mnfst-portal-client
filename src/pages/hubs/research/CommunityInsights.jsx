@@ -35,8 +35,12 @@ import {
     CardBody,
     InputGroup,
     InputRightElement,
+    UnorderedList,
+    ListItem,
+    Stack,
+    SimpleGrid,
 } from '@chakra-ui/react';
-import { FaExclamationCircle, FaQuestionCircle, FaChartLine, FaLightbulb, FaMagic } from 'react-icons/fa';
+import { FaExclamationCircle, FaQuestionCircle, FaChartLine, FaLightbulb, FaMagic, FaUserCircle } from 'react-icons/fa';
 import { api } from '../../../services/api';
 import axios from 'axios';
 import { useParams } from 'react-router-dom';
@@ -68,6 +72,8 @@ export default function CommunityInsights() {
     const isLoading = useLoadingStore(state => state.isLoading);
     const [selectedPersona, setSelectedPersona] = useState(null);
     const [queries, setQueries] = useState([]);
+    const [avatars, setAvatars] = useState([]);
+    const [perplexityResponse, setPerplexityResponse] = useState(null);
 
     useEffect(() => {
         fetchProjects();
@@ -78,12 +84,24 @@ export default function CommunityInsights() {
         const interval = setInterval(async () => {
             try {
                 const response = await api.get(`community-insights/${taskId}`);
+                console.log('Raw response from API:', response.data);
                 if (response.data.status === "processing") {
                     return; // Keep polling
                 }
 
+                // Store the raw Perplexity response
+                setPerplexityResponse(response.data.raw_perplexity_response);
+                console.log('Setting raw Perplexity response:', response.data.raw_perplexity_response);
+
                 // Results are ready
                 setInsights(response.data.sections || []);
+                console.log('Setting insights:', response.data.sections);
+
+                // Set avatars and log them
+                const avatars = response.data.avatars || [];
+                console.log('Setting avatars:', avatars);
+                setAvatars(avatars);
+
                 setLoading(false);
                 clearInterval(interval);
                 setPollingInterval(null);
@@ -214,6 +232,7 @@ export default function CommunityInsights() {
         setLoading(true);
         setError(null);
         setInsights([]);
+        setAvatars([]);
         onClose();
 
         try {
@@ -314,6 +333,51 @@ export default function CommunityInsights() {
         </Box>
     );
 
+    const renderAvatarInsights = useCallback((avatar) => {
+        console.log('Rendering avatar insights for:', avatar);
+        return (
+            <Box key={avatar.name} mb={4}>
+                <Text fontSize="lg" fontWeight="bold" mb={2}>
+                    {avatar.name}
+                </Text>
+                {avatar.insights && avatar.insights.map((insight, index) => {
+                    console.log('Rendering insight:', insight);
+                    return (
+                        <Box key={index} p={4} bg="white" borderRadius="md" boxShadow="sm" mb={2}>
+                            <Text fontWeight="semibold" mb={2}>
+                                {insight.title}
+                            </Text>
+                            <Text mb={2}>{insight.description}</Text>
+                            <Text fontStyle="italic" color="gray.600" mb={2}>
+                                Evidence: {insight.evidence}
+                            </Text>
+                            <Stack spacing={2}>
+                                <Text fontWeight="medium">Needs:</Text>
+                                <UnorderedList>
+                                    {insight.needs.map((need, i) => (
+                                        <ListItem key={i}>{need}</ListItem>
+                                    ))}
+                                </UnorderedList>
+                                <Text fontWeight="medium">Pain Points:</Text>
+                                <UnorderedList>
+                                    {insight.pain_points.map((point, i) => (
+                                        <ListItem key={i}>{point}</ListItem>
+                                    ))}
+                                </UnorderedList>
+                                <Text fontWeight="medium">Behaviors:</Text>
+                                <UnorderedList>
+                                    {insight.behaviors.map((behavior, i) => (
+                                        <ListItem key={i}>{behavior}</ListItem>
+                                    ))}
+                                </UnorderedList>
+                            </Stack>
+                        </Box>
+                    );
+                })}
+            </Box>
+        );
+    }, []);
+
     return (
         <Container maxW="container.xl" py={8}>
             <VStack spacing={6} align="stretch">
@@ -334,49 +398,79 @@ export default function CommunityInsights() {
                     </Box>
                 ) : (
                     <Box overflowX="auto">
-                        <HStack spacing={6} pb={4} minW="max-content">
-                            {insights.map((section, sectionIndex) => (
-                                <Box
-                                    key={sectionIndex}
-                                    minW="400px"
-                                    maxW="400px"
-                                    borderWidth="1px"
-                                    borderRadius="lg"
-                                    p={4}
-                                    bg="white"
-                                    boxShadow="sm"
-                                >
-                                    <VStack align="stretch" spacing={4}>
-                                        <HStack>
-                                            <Icon as={iconMap[section.icon] || FaLightbulb} />
-                                            <Heading size="md">{section.title}</Heading>
-                                            <Badge colorScheme="blue" ml="auto">
-                                                {section.insights?.length || 0}
-                                            </Badge>
-                                        </HStack>
+                        <VStack spacing={6} align="stretch">
+                            {/* General Insights */}
+                            <HStack spacing={6} pb={4} minW="max-content">
+                                {insights.map((section, sectionIndex) => (
+                                    <Box
+                                        key={sectionIndex}
+                                        minW="400px"
+                                        maxW="400px"
+                                        borderWidth="1px"
+                                        borderRadius="lg"
+                                        p={4}
+                                        bg="white"
+                                        boxShadow="sm"
+                                    >
+                                        <VStack align="stretch" spacing={4}>
+                                            <HStack>
+                                                <Icon as={iconMap[section.icon] || FaLightbulb} />
+                                                <Heading size="md">{section.title}</Heading>
+                                                <Badge colorScheme="blue" ml="auto">
+                                                    {section.insights?.length || 0}
+                                                </Badge>
+                                            </HStack>
 
-                                        <Box maxH="600px" overflowY="auto">
-                                            <VStack spacing={4} align="stretch">
-                                                {section.insights?.map((insight, insightIndex) => (
-                                                    <Box
-                                                        key={insightIndex}
-                                                        p={4}
-                                                        borderWidth="1px"
-                                                        borderRadius="md"
-                                                        _hover={{ bg: 'gray.50' }}
-                                                    >
-                                                        <Heading size="sm" mb={3}>
-                                                            {insight.title}
-                                                        </Heading>
-                                                        {renderInsightDetails(insight)}
-                                                    </Box>
-                                                ))}
-                                            </VStack>
-                                        </Box>
-                                    </VStack>
+                                            <Box maxH="600px" overflowY="auto">
+                                                <VStack spacing={4} align="stretch">
+                                                    {section.insights?.map((insight, insightIndex) => (
+                                                        <Box
+                                                            key={insightIndex}
+                                                            p={4}
+                                                            borderWidth="1px"
+                                                            borderRadius="md"
+                                                            _hover={{ bg: 'gray.50' }}
+                                                        >
+                                                            <Heading size="sm" mb={3}>
+                                                                {insight.title}
+                                                            </Heading>
+                                                            {renderInsightDetails(insight)}
+                                                        </Box>
+                                                    ))}
+                                                </VStack>
+                                            </Box>
+                                        </VStack>
+                                    </Box>
+                                ))}
+                            </HStack>
+
+                            {/* Avatar Insights */}
+                            {avatars.length > 0 && (
+                                <Box mt={6}>
+                                    <Text fontSize="xl" fontWeight="bold" mb={4}>
+                                        Avatar Insights
+                                    </Text>
+                                    <SimpleGrid columns={{ base: 1, md: 2 }} spacing={4}>
+                                        {avatars.map((avatar) => {
+                                            console.log('Mapping avatar:', avatar);
+                                            return renderAvatarInsights(avatar);
+                                        })}
+                                    </SimpleGrid>
                                 </Box>
-                            ))}
-                        </HStack>
+                            )}
+
+                            {/* Debug box for raw response */}
+                            {perplexityResponse && (
+                                <Box mt={6} p={4} bg="gray.50" borderRadius="md">
+                                    <Text fontSize="lg" fontWeight="bold" mb={2}>
+                                        Debug: Raw Response
+                                    </Text>
+                                    <Text whiteSpace="pre-wrap" fontSize="sm">
+                                        {JSON.stringify(perplexityResponse, null, 2)}
+                                    </Text>
+                                </Box>
+                            )}
+                        </VStack>
                     </Box>
                 )}
 
@@ -404,21 +498,25 @@ export default function CommunityInsights() {
                                                 onClick={() => setSelectedPersona(null)}
                                             />
 
-                                            <Text color="gray.500" textAlign="center">or choose avatars</Text>
+                                            <Box borderWidth="1px" borderStyle="dashed" borderRadius="md" p={4}>
+                                                <VStack spacing={4} align="stretch">
+                                                    <Text fontWeight="medium" color="gray.600">Persona-Based Research</Text>
 
-                                            <ResearchFocusOption
-                                                title="Active Senior with Chronic Pain"
-                                                description="Former hiker dealing with joint issues"
-                                                isSelected={selectedPersona === 'senior'}
-                                                onClick={() => setSelectedPersona('senior')}
-                                            />
+                                                    <ResearchFocusOption
+                                                        title="Active Senior with Chronic Pain"
+                                                        description="Former hiker dealing with joint issues"
+                                                        isSelected={selectedPersona === 'senior'}
+                                                        onClick={() => setSelectedPersona('senior')}
+                                                    />
 
-                                            <ResearchFocusOption
-                                                title="Young Professional with Sports Injury"
-                                                description="Recovering athlete seeking treatment"
-                                                isSelected={selectedPersona === 'athlete'}
-                                                onClick={() => setSelectedPersona('athlete')}
-                                            />
+                                                    <ResearchFocusOption
+                                                        title="Young Professional with Sports Injury"
+                                                        description="Recovering athlete seeking treatment"
+                                                        isSelected={selectedPersona === 'athlete'}
+                                                        onClick={() => setSelectedPersona('athlete')}
+                                                    />
+                                                </VStack>
+                                            </Box>
                                         </VStack>
                                     </CardBody>
                                 </Card>
@@ -477,10 +575,39 @@ export default function CommunityInsights() {
                     bg="gray.50"
                     overflowX="auto"
                 >
-                    <Heading size="sm" mb={2}>Debug: Raw Response</Heading>
-                    <pre style={{ whiteSpace: 'pre-wrap' }}>
-                        {JSON.stringify({ status: 'completed', sections: insights }, null, 2)}
-                    </pre>
+                    <Accordion allowToggle>
+                        <AccordionItem>
+                            <h2>
+                                <AccordionButton>
+                                    <Box flex="1" textAlign="left">
+                                        <Heading size="sm">Debug: Structured Response</Heading>
+                                    </Box>
+                                    <AccordionIcon />
+                                </AccordionButton>
+                            </h2>
+                            <AccordionPanel>
+                                <pre style={{ whiteSpace: 'pre-wrap' }}>
+                                    {JSON.stringify({ status: 'completed', sections: insights, avatars }, null, 2)}
+                                </pre>
+                            </AccordionPanel>
+                        </AccordionItem>
+
+                        <AccordionItem>
+                            <h2>
+                                <AccordionButton>
+                                    <Box flex="1" textAlign="left">
+                                        <Heading size="sm">Debug: Raw Perplexity Response</Heading>
+                                    </Box>
+                                    <AccordionIcon />
+                                </AccordionButton>
+                            </h2>
+                            <AccordionPanel>
+                                <pre style={{ whiteSpace: 'pre-wrap' }}>
+                                    {perplexityResponse ? JSON.stringify(perplexityResponse, null, 2) : 'No raw response available'}
+                                </pre>
+                            </AccordionPanel>
+                        </AccordionItem>
+                    </Accordion>
                 </Box>
             </VStack>
         </Container>
