@@ -31,11 +31,17 @@ import {
     Badge,
     Link,
     Icon,
+    Card,
+    CardBody,
+    InputGroup,
+    InputRightElement,
 } from '@chakra-ui/react';
-import { FaExclamationCircle, FaQuestionCircle, FaChartLine, FaLightbulb } from 'react-icons/fa';
+import { FaExclamationCircle, FaQuestionCircle, FaChartLine, FaLightbulb, FaMagic } from 'react-icons/fa';
 import { api } from '../../../services/api';
 import axios from 'axios';
+import { useParams } from 'react-router-dom';
 import useLoadingStore from '../../../store/loadingStore';
+import useProjectStore from '../../../store/projectStore';
 
 const iconMap = {
     FaExclamationCircle,
@@ -45,6 +51,9 @@ const iconMap = {
 };
 
 export default function CommunityInsights() {
+    const { projectId } = useParams();
+    const { projects, fetchProjects } = useProjectStore();
+    const currentProject = projects.find(p => p.id === projectId);
     const { isOpen, onOpen, onClose } = useDisclosure();
     const [error, setError] = useState(null);
     const [insights, setInsights] = useState([]);
@@ -57,6 +66,12 @@ export default function CommunityInsights() {
     const toast = useToast();
     const setLoading = useLoadingStore(state => state.setLoading);
     const isLoading = useLoadingStore(state => state.isLoading);
+    const [selectedPersona, setSelectedPersona] = useState(null);
+    const [queries, setQueries] = useState([]);
+
+    useEffect(() => {
+        fetchProjects();
+    }, [fetchProjects]);
 
     // Function to start polling for results
     const startPolling = useCallback((taskId) => {
@@ -112,10 +127,10 @@ export default function CommunityInsights() {
         };
     }, [pollingInterval]);
 
-    const handleGenerateInsights = async () => {
-        if (!topicKeyword.trim()) {
+    const handleAddQuery = (query) => {
+        if (!query.trim()) {
             toast({
-                title: "Topic keyword is required",
+                title: "Query is required",
                 status: "error",
                 duration: 3000,
                 isClosable: true,
@@ -123,26 +138,93 @@ export default function CommunityInsights() {
             return;
         }
 
-        setLoading(true, topicKeyword);
+        setQueries([...queries, query.trim()]);
+        setTopicKeyword('');
+    };
+
+    const handleGenerateWithAI = async () => {
+        console.log('Current project:', currentProject);
+        console.log('Projects:', projects);
+        console.log('Project ID:', projectId);
+
+        if (!currentProject) {
+            toast({
+                title: "No project found",
+                description: "Could not find the current project",
+                status: "error",
+                duration: 3000,
+                isClosable: true,
+            });
+            return;
+        }
+
+        if (!currentProject.description && !currentProject.project?.description) {
+            toast({
+                title: "No project description",
+                description: "Please add a description to your project",
+                status: "error",
+                duration: 3000,
+                isClosable: true,
+            });
+            return;
+        }
+
+        const description = currentProject.description || currentProject.project?.description;
+        setLoading(true, `Researching for "${description}"`);
+        try {
+            const response = await api.post('ai/generate-query', {
+                description: description
+            });
+
+            if (response.data.query) {
+                setTopicKeyword(response.data.query);
+                toast({
+                    title: "Query Generated",
+                    description: "AI has generated a query for you",
+                    status: "success",
+                    duration: 3000,
+                    isClosable: true,
+                });
+            }
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Failed to generate query with AI",
+                status: "error",
+                duration: 3000,
+                isClosable: true,
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleGenerateInsights = async () => {
+        if (!topicKeyword.trim()) {
+            toast({
+                title: "No query provided",
+                description: "Please enter a query or generate one with AI",
+                status: "error",
+                duration: 3000,
+                isClosable: true,
+            });
+            return;
+        }
+
+        setLoading(true);
         setError(null);
         setInsights([]);
-        onClose(); // Close the modal while processing
+        onClose();
 
         try {
-            // Convert newline-separated URLs to arrays
-            const sourceUrlsArray = sourceUrls.split('\n').filter(url => url.trim());
-            const productUrlsArray = productUrls.split('\n').filter(url => url.trim());
-
-            // Start the generation process
             const response = await api.post('community-insights', {
-                topic_keyword: topicKeyword,
-                source_urls: sourceUrlsArray,
-                product_urls: productUrlsArray,
-                use_only_specified_sources: useOnlySpecifiedSources,
+                topic_keyword: topicKeyword.trim(),
+                persona: selectedPersona || null,
+                source_urls: [],
+                product_urls: []
             });
 
             if (response.data.task_id) {
-                // Start polling for results
                 setTaskId(response.data.task_id);
                 startPolling(response.data.task_id);
 
@@ -156,7 +238,6 @@ export default function CommunityInsights() {
             } else {
                 throw new Error('No task ID received');
             }
-
         } catch (error) {
             console.error("Error generating insights:", error);
             setError("Error generating insights. Please try again.");
@@ -216,13 +297,30 @@ export default function CommunityInsights() {
         </VStack>
     );
 
+    const ResearchFocusOption = ({ title, description, isSelected, onClick }) => (
+        <Box
+            p={4}
+            borderWidth="1px"
+            borderRadius="lg"
+            cursor="pointer"
+            bg={isSelected ? "purple.50" : "white"}
+            borderColor={isSelected ? "purple.500" : "gray.200"}
+            onClick={onClick}
+            _hover={{ borderColor: "purple.500" }}
+            transition="all 0.2s"
+        >
+            <Text fontWeight="semibold">{title}</Text>
+            <Text color="gray.600" fontSize="sm">{description}</Text>
+        </Box>
+    );
+
     return (
         <Container maxW="container.xl" py={8}>
             <VStack spacing={6} align="stretch">
                 <HStack justify="space-between">
                     <Heading size="lg">Community Insights</Heading>
                     <Button
-                        colorScheme="blue"
+                        colorScheme="purple"
                         onClick={onOpen}
                         isLoading={isLoading}
                     >
@@ -285,66 +383,86 @@ export default function CommunityInsights() {
                 <Modal isOpen={isOpen} onClose={onClose} size="xl">
                     <ModalOverlay />
                     <ModalContent>
-                        <ModalHeader>Generate Community Insights</ModalHeader>
+                        <ModalHeader>
+                            <Heading size="lg">Generate Insights</Heading>
+                            <Text color="gray.600" fontSize="md" mt={1}>
+                                Select avatars to generate targeted insights
+                            </Text>
+                        </ModalHeader>
                         <ModalCloseButton />
-                        <ModalBody>
-                            <VStack spacing={4}>
-                                <FormControl isRequired>
-                                    <FormLabel>Topic Keyword</FormLabel>
-                                    <Input
-                                        value={topicKeyword}
-                                        onChange={(e) => setTopicKeyword(e.target.value)}
-                                        placeholder="Enter a topic keyword"
-                                    />
-                                </FormControl>
+                        <ModalBody pb={6}>
+                            <VStack spacing={6} align="stretch">
+                                <Card variant="outline">
+                                    <CardBody>
+                                        <VStack spacing={4} align="stretch">
+                                            <Heading size="md">Choose Your Research Focus</Heading>
 
-                                <FormControl>
-                                    <FormLabel>Source URLs (Optional)</FormLabel>
-                                    <Textarea
-                                        value={sourceUrls}
-                                        onChange={(e) => setSourceUrls(e.target.value)}
-                                        placeholder="Enter URLs (one per line) of specific forum threads or discussions to analyze"
-                                        rows={3}
-                                    />
-                                    <FormHelperText>Enter each URL on a new line</FormHelperText>
-                                </FormControl>
+                                            <ResearchFocusOption
+                                                title="General Insights"
+                                                description="Broad analysis without specific persona focus"
+                                                isSelected={!selectedPersona}
+                                                onClick={() => setSelectedPersona(null)}
+                                            />
 
-                                <FormControl>
-                                    <FormLabel>Product URLs (Optional)</FormLabel>
-                                    <Textarea
-                                        value={productUrls}
-                                        onChange={(e) => setProductUrls(e.target.value)}
-                                        placeholder="Enter URLs (one per line) of specific product pages to analyze"
-                                        rows={3}
-                                    />
-                                    <FormHelperText>Enter each URL on a new line</FormHelperText>
-                                </FormControl>
+                                            <Text color="gray.500" textAlign="center">or choose avatars</Text>
 
-                                {(sourceUrls.trim() || productUrls.trim()) && (
-                                    <FormControl display="flex" alignItems="center">
-                                        <FormLabel mb="0">
-                                            Use Only Specified Sources
-                                        </FormLabel>
-                                        <Switch
-                                            isChecked={useOnlySpecifiedSources}
-                                            onChange={(e) => setUseOnlySpecifiedSources(e.target.checked)}
-                                        />
-                                    </FormControl>
-                                )}
+                                            <ResearchFocusOption
+                                                title="Active Senior with Chronic Pain"
+                                                description="Former hiker dealing with joint issues"
+                                                isSelected={selectedPersona === 'senior'}
+                                                onClick={() => setSelectedPersona('senior')}
+                                            />
+
+                                            <ResearchFocusOption
+                                                title="Young Professional with Sports Injury"
+                                                description="Recovering athlete seeking treatment"
+                                                isSelected={selectedPersona === 'athlete'}
+                                                onClick={() => setSelectedPersona('athlete')}
+                                            />
+                                        </VStack>
+                                    </CardBody>
+                                </Card>
+
+                                <Card variant="outline">
+                                    <CardBody>
+                                        <VStack spacing={4} align="stretch">
+                                            <Heading size="md">Enter Your Query</Heading>
+
+                                            <InputGroup>
+                                                <Textarea
+                                                    value={topicKeyword}
+                                                    onChange={(e) => setTopicKeyword(e.target.value)}
+                                                    placeholder="Type your query here (e.g., 'joint pain management')"
+                                                    resize="vertical"
+                                                    minH="60px"
+                                                    rows={2}
+                                                />
+                                            </InputGroup>
+
+                                            <Button
+                                                leftIcon={<Icon as={FaMagic} />}
+                                                variant="outline"
+                                                colorScheme="purple"
+                                                width="100%"
+                                                onClick={handleGenerateWithAI}
+                                                isLoading={isLoading}
+                                            >
+                                                Generate with AI
+                                            </Button>
+                                        </VStack>
+                                    </CardBody>
+                                </Card>
                             </VStack>
                         </ModalBody>
 
                         <ModalFooter>
-                            <Button variant="ghost" mr={3} onClick={onClose}>
-                                Cancel
-                            </Button>
                             <Button
-                                colorScheme="blue"
+                                colorScheme="purple"
+                                width="100%"
                                 onClick={handleGenerateInsights}
-                                isLoading={isLoading}
                                 isDisabled={!topicKeyword.trim()}
                             >
-                                Generate
+                                Generate Insights
                             </Button>
                         </ModalFooter>
                     </ModalContent>
