@@ -39,6 +39,8 @@ import {
     ListItem,
     Stack,
     SimpleGrid,
+    Wrap,
+    WrapItem,
 } from '@chakra-ui/react';
 import { FaExclamationCircle, FaQuestionCircle, FaChartLine, FaLightbulb, FaMagic, FaUserCircle } from 'react-icons/fa';
 import { api } from '../../../services/api';
@@ -459,7 +461,7 @@ export default function CommunityInsights() {
     const currentProject = projects.find(p => p.id === projectId);
     const { isOpen, onOpen, onClose } = useDisclosure();
     const [error, setError] = useState(null);
-    const [insights, setInsights] = useState(mockData.sections); // Use mock data
+    const [insights, setInsights] = useState([]); // Initialize empty
     const [topicKeyword, setTopicKeyword] = useState('');
     const [sourceUrls, setSourceUrls] = useState('');
     const [productUrls, setProductUrls] = useState('');
@@ -471,7 +473,7 @@ export default function CommunityInsights() {
     const isLoading = useLoadingStore(state => state.isLoading);
     const [selectedPersona, setSelectedPersona] = useState(null);
     const [queries, setQueries] = useState([]);
-    const [avatars, setAvatars] = useState(mockData.avatars); // Use mock data
+    const [avatars, setAvatars] = useState([]); // Initialize empty
     const [perplexityResponse, setPerplexityResponse] = useState(null);
     const [selectedQuery, setSelectedQuery] = useState(null);
 
@@ -719,7 +721,7 @@ export default function CommunityInsights() {
         onClose();
 
         // Use mock data if USE_MOCK_DATA is true
-        const USE_MOCK_DATA = true; // Toggle this to switch between mock and real data
+        const USE_MOCK_DATA = false; // Toggle this to switch between mock and real data
 
         if (USE_MOCK_DATA) {
             setTimeout(() => {
@@ -865,62 +867,77 @@ export default function CommunityInsights() {
                     <Box overflowX="auto">
                         <VStack spacing={6} align="stretch">
                             {/* Query Filter and Delete Options */}
-                            <HStack spacing={4} py={2} w="full" justify="space-between">
-                                {/* Query Filter */}
-                                <HStack spacing={4} overflowX="auto" flex={1}>
-                                    <Badge
-                                        colorScheme={!selectedQuery ? "purple" : "gray"}
-                                        fontSize="sm"
-                                        px={3}
-                                        py={1}
-                                        cursor="pointer"
-                                        onClick={() => setSelectedQuery(null)}
-                                        _hover={{ opacity: 0.8 }}
-                                    >
-                                        All Queries
-                                    </Badge>
-                                    {getUniqueQueries().map((query) => (
-                                        <Badge
-                                            key={query}
-                                            colorScheme={selectedQuery === query ? "purple" : "gray"}
-                                            fontSize="sm"
-                                            px={3}
-                                            py={1}
-                                            cursor="pointer"
-                                            onClick={() => setSelectedQuery(query)}
-                                            _hover={{ opacity: 0.8 }}
-                                        >
-                                            {query}
-                                        </Badge>
-                                    ))}
-                                </HStack>
+                            <Box w="full" borderWidth="1px" borderRadius="lg" p={4} bg="white">
+                                <VStack spacing={4} align="stretch">
+                                    <HStack justify="space-between">
+                                        <Text fontWeight="medium">Filter by Query</Text>
+                                        {/* Delete Options */}
+                                        <HStack spacing={2}>
+                                            {selectedQuery && (
+                                                <Button
+                                                    size="sm"
+                                                    colorScheme="red"
+                                                    variant="outline"
+                                                    onClick={() => handleDeleteInsights(selectedQuery)}
+                                                >
+                                                    Delete Selected Query
+                                                </Button>
+                                            )}
+                                            <Button
+                                                size="sm"
+                                                colorScheme="red"
+                                                variant="outline"
+                                                onClick={() => {
+                                                    if (window.confirm('Are you sure you want to delete all insights?')) {
+                                                        handleDeleteInsights();
+                                                    }
+                                                }}
+                                            >
+                                                Delete All
+                                            </Button>
+                                        </HStack>
+                                    </HStack>
 
-                                {/* Delete Options */}
-                                <HStack spacing={2}>
-                                    {selectedQuery && (
-                                        <Button
-                                            size="sm"
-                                            colorScheme="red"
-                                            variant="outline"
-                                            onClick={() => handleDeleteInsights(selectedQuery)}
-                                        >
-                                            Delete Selected Query
-                                        </Button>
-                                    )}
-                                    <Button
-                                        size="sm"
-                                        colorScheme="red"
-                                        variant="outline"
-                                        onClick={() => {
-                                            if (window.confirm('Are you sure you want to delete all insights?')) {
-                                                handleDeleteInsights();
-                                            }
-                                        }}
-                                    >
-                                        Delete All
-                                    </Button>
-                                </HStack>
-                            </HStack>
+                                    {/* Query Filter */}
+                                    <Wrap spacing={2} align="center">
+                                        <WrapItem display="flex" alignItems="center">
+                                            <Badge
+                                                colorScheme={!selectedQuery ? "purple" : "gray"}
+                                                fontSize="sm"
+                                                px={3}
+                                                py={2}
+                                                cursor="pointer"
+                                                onClick={() => setSelectedQuery(null)}
+                                                _hover={{ opacity: 0.8 }}
+                                                borderRadius="full"
+                                                whiteSpace="normal"
+                                                textAlign="left"
+                                            >
+                                                All Queries
+                                            </Badge>
+                                        </WrapItem>
+                                        {getUniqueQueries().map((query) => (
+                                            <WrapItem key={query} display="flex" alignItems="center">
+                                                <Badge
+                                                    colorScheme={selectedQuery === query ? "purple" : "gray"}
+                                                    fontSize="sm"
+                                                    px={3}
+                                                    py={2}
+                                                    cursor="pointer"
+                                                    onClick={() => setSelectedQuery(query)}
+                                                    _hover={{ opacity: 0.8 }}
+                                                    borderRadius="full"
+                                                    whiteSpace="normal"
+                                                    textAlign="left"
+                                                    maxW={{ base: "full", md: "400px" }}
+                                                >
+                                                    {query}
+                                                </Badge>
+                                            </WrapItem>
+                                        ))}
+                                    </Wrap>
+                                </VStack>
+                            </Box>
 
                             {/* General Insights */}
                             <VStack spacing={6} w="full">
@@ -976,73 +993,97 @@ export default function CommunityInsights() {
                                                                     maxW="400px"
                                                                 >
                                                                     <VStack align="start" spacing={4} w="100%">
+                                                                        {/* Title */}
+                                                                        <Heading size="md">
+                                                                            {insight.title}
+                                                                        </Heading>
+
                                                                         {/* Query Badge */}
                                                                         <Badge
                                                                             colorScheme="purple"
                                                                             fontSize="sm"
-                                                                            px={2}
-                                                                            py={1}
+                                                                            px={3}
+                                                                            py={2}
+                                                                            whiteSpace="normal"
+                                                                            wordBreak="break-word"
+                                                                            display="block"
+                                                                            textAlign="left"
+                                                                            w="100%"
+                                                                            bg="purple.50"
                                                                         >
-                                                                            QUERY: {insight.query || 'NURSE FOOT PAIN'}
+                                                                            QUERY: {insight.query}
                                                                         </Badge>
 
                                                                         {/* Platform */}
-                                                                        <Text fontSize="md" color="gray.700">
-                                                                            <strong>Platform:</strong> {insight.platform}
-                                                                        </Text>
+                                                                        <Box w="100%">
+                                                                            <Text as="span" fontWeight="semibold">Platform: </Text>
+                                                                            <Text as="span" whiteSpace="normal" wordBreak="break-word" display="inline">
+                                                                                {insight.platform}
+                                                                            </Text>
+                                                                        </Box>
 
                                                                         {/* Price Range */}
-                                                                        <Text fontSize="md" color="gray.700">
-                                                                            <strong>Price Range:</strong> {insight.price_range}
-                                                                        </Text>
+                                                                        <Box w="100%">
+                                                                            <Text as="span" fontWeight="semibold">Price Range: </Text>
+                                                                            <Text as="span" whiteSpace="normal" wordBreak="break-word" display="inline">
+                                                                                {insight.price_range}
+                                                                            </Text>
+                                                                        </Box>
 
                                                                         {/* Engagement */}
-                                                                        <Text fontSize="md" color="gray.700">
-                                                                            <strong>Engagement:</strong> {insight.engagement_metrics}
-                                                                        </Text>
+                                                                        <Box w="100%">
+                                                                            <Text as="span" fontWeight="semibold">Engagement: </Text>
+                                                                            <Text as="span" whiteSpace="normal" wordBreak="break-word" display="inline">
+                                                                                {insight.engagement_metrics}
+                                                                            </Text>
+                                                                        </Box>
 
                                                                         {/* Correlation */}
-                                                                        <Text fontSize="md" color="gray.700">
-                                                                            <strong>Correlation:</strong> {insight.correlation}
-                                                                        </Text>
+                                                                        <Box w="100%">
+                                                                            <Text as="span" fontWeight="semibold">Correlation: </Text>
+                                                                            <Text as="span" whiteSpace="normal" wordBreak="break-word" display="inline">
+                                                                                {insight.correlation}
+                                                                            </Text>
+                                                                        </Box>
 
                                                                         {/* Significance */}
-                                                                        <Text fontSize="md" color="gray.700">
-                                                                            <strong>Significance:</strong> {insight.significance}
-                                                                        </Text>
+                                                                        <Box w="100%">
+                                                                            <Text as="span" fontWeight="semibold">Significance: </Text>
+                                                                            <Text as="span" whiteSpace="normal" wordBreak="break-word" display="inline">
+                                                                                {insight.significance}
+                                                                            </Text>
+                                                                        </Box>
 
                                                                         {/* Positive Feedback */}
                                                                         <Box w="100%">
-                                                                            <Text fontSize="md" fontWeight="bold" color="green.600">
+                                                                            <Text color="green.600" fontWeight="semibold">
                                                                                 Positive Feedback:
                                                                             </Text>
-                                                                            <UnorderedList pl={4} mt={2}>
+                                                                            <UnorderedList pl={4} mt={1}>
                                                                                 {insight.positive_feedback?.map((point, idx) => (
-                                                                                    <ListItem key={idx} fontSize="md">{point}</ListItem>
+                                                                                    <ListItem key={idx}>{point}</ListItem>
                                                                                 ))}
                                                                             </UnorderedList>
                                                                         </Box>
 
                                                                         {/* Negative Feedback */}
                                                                         <Box w="100%">
-                                                                            <Text fontSize="md" fontWeight="bold" color="red.600">
+                                                                            <Text color="red.600" fontWeight="semibold">
                                                                                 Negative Feedback:
                                                                             </Text>
-                                                                            <UnorderedList pl={4} mt={2}>
+                                                                            <UnorderedList pl={4} mt={1}>
                                                                                 {insight.negative_feedback?.map((point, idx) => (
-                                                                                    <ListItem key={idx} fontSize="md">{point}</ListItem>
+                                                                                    <ListItem key={idx}>{point}</ListItem>
                                                                                 ))}
                                                                             </UnorderedList>
                                                                         </Box>
 
                                                                         {/* Market Gap */}
                                                                         <Box w="100%">
-                                                                            <Text fontSize="md" fontWeight="bold" color="purple.600">
+                                                                            <Text color="purple.600" fontWeight="semibold">
                                                                                 Market Gap:
                                                                             </Text>
-                                                                            <Text fontSize="md" mt={2}>
-                                                                                {insight.market_gap}
-                                                                            </Text>
+                                                                            <Text mt={1}>{insight.market_gap}</Text>
                                                                         </Box>
                                                                     </VStack>
                                                                 </Box>
@@ -1094,7 +1135,7 @@ export default function CommunityInsights() {
                                                                                 whiteSpace="normal"
                                                                                 wordBreak="break-word"
                                                                             >
-                                                                                QUERY: {insight.query || 'NURSE FOOT PAIN'}
+                                                                                QUERY: {insight.query}
                                                                             </Badge>
                                                                         </HStack>
                                                                     </VStack>
