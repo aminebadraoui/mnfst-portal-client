@@ -229,6 +229,32 @@ export default function CommunityInsights() {
             return;
         }
 
+        if (!currentProject) {
+            toast({
+                title: "No project found",
+                description: "Could not find the current project",
+                status: "error",
+                duration: 3000,
+                isClosable: true,
+            });
+            return;
+        }
+
+        const projectDescription = currentProject.description || currentProject.project?.description;
+        if (!projectDescription) {
+            toast({
+                title: "No project description",
+                description: "Please add a description to your project",
+                status: "error",
+                duration: 3000,
+                isClosable: true,
+            });
+            return;
+        }
+
+        // Combine topic keyword with project description
+        const enrichedTopic = `${topicKeyword.trim()} (Project Context: ${projectDescription})`;
+
         setLoading(true);
         setError(null);
         setInsights([]);
@@ -237,7 +263,7 @@ export default function CommunityInsights() {
 
         try {
             const response = await api.post('community-insights', {
-                topic_keyword: topicKeyword.trim(),
+                topic_keyword: enrichedTopic,
                 persona: selectedPersona || null,
                 source_urls: [],
                 product_urls: []
@@ -271,50 +297,138 @@ export default function CommunityInsights() {
         }
     };
 
-    const renderInsightDetails = (insight) => (
-        <VStack align="start" spacing={3} w="100%">
-            <Box p={3} bg="gray.50" borderRadius="md" w="100%">
-                <Text fontStyle="italic" color="gray.700">"{insight.evidence}"</Text>
-            </Box>
-
-            {insight.source_url && (
-                <Text fontSize="sm" color="gray.600">
-                    <strong>Source:</strong>{' '}
-                    {typeof insight.source_url === 'string' && insight.source_url.startsWith('http') ? (
-                        <Link href={insight.source_url} isExternal color="blue.500" textDecoration="underline">
-                            {insight.source_url}
-                        </Link>
-                    ) : (
-                        `Source ${insight.source_url}`
+    const renderInsightDetails = (insight) => {
+        // Special rendering for product insights
+        if (insight.platform || insight.positive_feedback || insight.negative_feedback) {
+            return (
+                <VStack align="start" spacing={3} w="100%">
+                    {insight.platform && (
+                        <Text fontSize="sm" color="gray.600">
+                            <strong>Platform:</strong> {insight.platform}
+                        </Text>
                     )}
-                </Text>
-            )}
 
-            {insight.engagement_metrics && (
-                <Text fontSize="sm" color="gray.600">
-                    <strong>Engagement:</strong> {insight.engagement_metrics}
-                </Text>
-            )}
+                    {insight.price_range && (
+                        <Text fontSize="sm" color="gray.600">
+                            <strong>Price Range:</strong> {insight.price_range}
+                        </Text>
+                    )}
 
-            {insight.frequency && (
-                <Text fontSize="sm" color="gray.600">
-                    <strong>Frequency:</strong> {insight.frequency}
-                </Text>
-            )}
+                    {insight.positive_feedback && insight.positive_feedback.length > 0 && (
+                        <Box>
+                            <Text fontSize="sm" fontWeight="bold" color="green.600">Positive Feedback:</Text>
+                            <UnorderedList pl={4}>
+                                {insight.positive_feedback.map((point, idx) => (
+                                    <ListItem key={idx} fontSize="sm">{point}</ListItem>
+                                ))}
+                            </UnorderedList>
+                        </Box>
+                    )}
 
-            {insight.correlation && (
-                <Text fontSize="sm" color="gray.600">
-                    <strong>Correlation:</strong> {insight.correlation}
-                </Text>
-            )}
+                    {insight.negative_feedback && insight.negative_feedback.length > 0 && (
+                        <Box>
+                            <Text fontSize="sm" fontWeight="bold" color="red.600">Negative Feedback:</Text>
+                            <UnorderedList pl={4}>
+                                {insight.negative_feedback.map((point, idx) => (
+                                    <ListItem key={idx} fontSize="sm">{point}</ListItem>
+                                ))}
+                            </UnorderedList>
+                        </Box>
+                    )}
 
-            {insight.significance && (
-                <Text fontSize="sm" color="gray.600">
-                    <strong>Significance:</strong> {insight.significance}
-                </Text>
-            )}
-        </VStack>
-    );
+                    {insight.market_gap && (
+                        <Box>
+                            <Text fontSize="sm" fontWeight="bold" color="purple.600">Market Gap:</Text>
+                            <Text fontSize="sm">{insight.market_gap}</Text>
+                        </Box>
+                    )}
+
+                    {insight.source_url && (
+                        <Text fontSize="sm" color="gray.600">
+                            <strong>Source:</strong>{' '}
+                            {typeof insight.source_url === 'string' && insight.source_url.startsWith('http') ? (
+                                <Link href={insight.source_url} isExternal color="blue.500" textDecoration="underline">
+                                    {insight.source_url}
+                                </Link>
+                            ) : (
+                                `Source ${insight.source_url}`
+                            )}
+                        </Text>
+                    )}
+
+                    {insight.engagement_metrics && (
+                        <Text fontSize="sm" color="gray.600">
+                            <strong>Engagement:</strong> {insight.engagement_metrics}
+                        </Text>
+                    )}
+
+                    {insight.frequency && (
+                        <Text fontSize="sm" color="gray.600">
+                            <strong>Frequency:</strong> {insight.frequency}
+                        </Text>
+                    )}
+
+                    {insight.correlation && (
+                        <Text fontSize="sm" color="gray.600">
+                            <strong>Correlation:</strong> {insight.correlation}
+                        </Text>
+                    )}
+
+                    {insight.significance && (
+                        <Text fontSize="sm" color="gray.600">
+                            <strong>Significance:</strong> {insight.significance}
+                        </Text>
+                    )}
+                </VStack>
+            );
+        }
+
+        // Default rendering for other insight types
+        return (
+            <VStack align="start" spacing={3} w="100%">
+                <Box p={3} bg="gray.50" borderRadius="md" w="100%">
+                    <Text fontStyle="italic" color="gray.700">"{insight.evidence}"</Text>
+                </Box>
+
+                {insight.source_url && (
+                    <Text fontSize="sm" color="gray.600">
+                        <strong>Source:</strong>{' '}
+                        {typeof insight.source_url === 'string' && insight.source_url.startsWith('http') ? (
+                            <Link href={insight.source_url} isExternal color="blue.500" textDecoration="underline">
+                                {insight.source_url}
+                            </Link>
+                        ) : (
+                            `Source ${insight.source_url}`
+                        )}
+                    </Text>
+                )}
+
+                {insight.engagement_metrics && (
+                    <Text fontSize="sm" color="gray.600">
+                        <strong>Engagement:</strong> {insight.engagement_metrics}
+                    </Text>
+                )}
+
+                {insight.frequency && (
+                    <Text fontSize="sm" color="gray.600">
+                        <strong>Frequency:</strong> {insight.frequency}
+                    </Text>
+                )}
+
+                {insight.correlation && (
+                    <Text fontSize="sm" color="gray.600">
+                        <strong>Correlation:</strong> {insight.correlation}
+                    </Text>
+                )}
+
+                {insight.significance && (
+                    <Text fontSize="sm" color="gray.600">
+                        <strong>Significance:</strong> {insight.significance}
+                    </Text>
+                )}
+            </VStack>
+        );
+    };
 
     const ResearchFocusOption = ({ title, description, isSelected, onClick }) => (
         <Box
