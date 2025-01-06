@@ -48,6 +48,7 @@ import axios from 'axios';
 import { useParams } from 'react-router-dom';
 import useLoadingStore from '../../../store/loadingStore';
 import useProjectStore from '../../../store/projectStore';
+import { useAuthStore } from '../../../store/authStore';
 
 const iconMap = {
     FaExclamationCircle,
@@ -461,7 +462,33 @@ export default function CommunityInsights() {
     const currentProject = projects.find(p => p.id === projectId);
     const { isOpen, onOpen, onClose } = useDisclosure();
     const [error, setError] = useState(null);
-    const [insights, setInsights] = useState([]); // Initialize empty
+    const [insights, setInsights] = useState([
+        {
+            title: "Pain & Frustration Analysis",
+            icon: "FaExclamationCircle",
+            insights: []
+        },
+        {
+            title: "Failed Solutions Analysis",
+            icon: "FaTimesCircle",
+            insights: []
+        },
+        {
+            title: "Question & Advice Mapping",
+            icon: "FaQuestionCircle",
+            insights: []
+        },
+        {
+            title: "Pattern Detection",
+            icon: "FaChartLine",
+            insights: []
+        },
+        {
+            title: "Popular Products Analysis",
+            icon: "FaShoppingCart",
+            insights: []
+        }
+    ]); // Initialize with predefined empty sections
     const [topicKeyword, setTopicKeyword] = useState('');
     const [sourceUrls, setSourceUrls] = useState('');
     const [productUrls, setProductUrls] = useState('');
@@ -476,10 +503,43 @@ export default function CommunityInsights() {
     const [avatars, setAvatars] = useState([]); // Initialize empty
     const [perplexityResponse, setPerplexityResponse] = useState(null);
     const [selectedQuery, setSelectedQuery] = useState(null);
+    const { user } = useAuthStore();
 
     useEffect(() => {
         fetchProjects();
     }, [fetchProjects]);
+
+    // Fetch initial insights
+    useEffect(() => {
+        const fetchInitialInsights = async () => {
+            if (!projectId || !user?.id) return;
+
+            try {
+                const response = await api.get(`community-insights/${projectId}`);
+                if (response.data) {
+                    // Update insights while preserving the section structure
+                    const updatedInsights = insights.map(section => {
+                        // Find matching section in the response
+                        const responseSection = response.data.sections?.find(s => s.title === section.title);
+                        return {
+                            ...section,
+                            insights: responseSection?.insights || []
+                        };
+                    });
+                    setInsights(updatedInsights);
+                    setAvatars(response.data.avatars || []);
+                    setPerplexityResponse(response.data.raw_perplexity_response);
+                }
+            } catch (error) {
+                // Only log the error, don't modify the insights state
+                if (error.response?.status !== 404) {
+                    console.error("Error fetching initial insights:", error);
+                }
+            }
+        };
+
+        fetchInitialInsights();
+    }, [projectId, user?.id]);
 
     // Delete insights by query
     const handleDeleteInsights = useCallback((query = null) => {
@@ -539,9 +599,8 @@ export default function CommunityInsights() {
     const startPolling = useCallback((taskId) => {
         const interval = setInterval(async () => {
             try {
-                const response = await api.get(`community-insights/${taskId}`);
-                console.log('Raw response from API:', response.data);
-                if (response.data.status === "processing") {
+                const response = await api.get(`community-insights/tasks/${taskId}`);
+                if (!response.data || response.data.status === "processing") {
                     return; // Keep polling
                 }
 
@@ -561,7 +620,6 @@ export default function CommunityInsights() {
                 setLoading(false);
                 clearInterval(interval);
                 setPollingInterval(null);
-                setTaskId(null);
 
                 toast({
                     title: "Insights Generated",
@@ -577,7 +635,6 @@ export default function CommunityInsights() {
                 setLoading(false);
                 clearInterval(interval);
                 setPollingInterval(null);
-                setTaskId(null);
 
                 toast({
                     title: "Error",
@@ -742,16 +799,25 @@ export default function CommunityInsights() {
         }
 
         try {
+            if (!user?.id) {
+                throw new Error('User not authenticated');
+            }
+            if (!projectId) {
+                throw new Error('Project ID is required');
+            }
+
             const response = await api.post('community-insights', {
                 topic_keyword: enrichedTopic,
                 user_query: userQuery,
                 persona: selectedPersona || null,
                 source_urls: [],
-                product_urls: []
+                product_urls: [],
+                user_id: user.id,
+                project_id: projectId
             });
 
-            if (response.data.task_id) {
-                setTaskId(response.data.task_id);
+            if (response.data.status === "processing" && response.data.task_id) {
+                // Start polling for results using task_id
                 startPolling(response.data.task_id);
 
                 toast({
@@ -761,8 +827,22 @@ export default function CommunityInsights() {
                     duration: 5000,
                     isClosable: true,
                 });
+            } else if (response.data.status === "completed") {
+                // Results are ready immediately
+                setInsights(response.data.sections || []);
+                setAvatars(response.data.avatars || []);
+                setPerplexityResponse(response.data.raw_perplexity_response);
+                setLoading(false);
+
+                toast({
+                    title: "Insights Generated",
+                    description: "Successfully generated community insights.",
+                    status: "success",
+                    duration: 5000,
+                    isClosable: true,
+                });
             } else {
-                throw new Error('No task ID received');
+                throw new Error('Invalid response: missing task_id or invalid status');
             }
         } catch (error) {
             console.error("Error generating insights:", error);
@@ -859,14 +939,10 @@ export default function CommunityInsights() {
                     </Button>
                 </HStack>
 
-                {insights.length === 0 && !isLoading ? (
-                    <Box p={6} textAlign="center" bg="gray.50" borderRadius="md">
-                        <Text>No insights generated yet. Click the button above to get started.</Text>
-                    </Box>
-                ) : (
-                    <Box overflowX="auto">
-                        <VStack spacing={6} align="stretch">
-                            {/* Query Filter and Delete Options */}
+                <Box overflowX="auto">
+                    <VStack spacing={6} align="stretch">
+                        {/* Query Filter and Delete Options */}
+                        {insights.length > 0 && (
                             <Box w="full" borderWidth="1px" borderRadius="lg" p={4} bg="white">
                                 <VStack spacing={4} align="stretch">
                                     <HStack justify="space-between">
@@ -938,45 +1014,100 @@ export default function CommunityInsights() {
                                     </Wrap>
                                 </VStack>
                             </Box>
+                        )}
 
-                            {/* General Insights */}
-                            <VStack spacing={6} w="full">
-                                {filteredInsights.map((section, sectionIndex) => (
-                                    <Box
-                                        key={sectionIndex}
-                                        borderWidth="1px"
-                                        borderRadius="lg"
-                                        p={4}
-                                        bg="white"
-                                        boxShadow="sm"
-                                        position="relative"
-                                        w="full"
-                                    >
-                                        <VStack align="stretch" spacing={4} w="full">
-                                            <HStack
-                                                bg="gray.50"
-                                                p={3}
-                                                borderRadius="md"
-                                                position="sticky"
-                                                top="0"
-                                                zIndex="1"
+                        {/* General Insights */}
+                        <VStack spacing={6} w="full">
+                            {(isLoading ? [
+                                {
+                                    title: "Pain & Frustration Analysis",
+                                    icon: "FaExclamationCircle",
+                                    insights: []
+                                },
+                                {
+                                    title: "Failed Solutions Analysis",
+                                    icon: "FaTimesCircle",
+                                    insights: []
+                                },
+                                {
+                                    title: "Question & Advice Mapping",
+                                    icon: "FaQuestionCircle",
+                                    insights: []
+                                },
+                                {
+                                    title: "Pattern Detection",
+                                    icon: "FaChartLine",
+                                    insights: []
+                                },
+                                {
+                                    title: "Popular Products Analysis",
+                                    icon: "FaShoppingCart",
+                                    insights: []
+                                }
+                            ] : insights).map((section, sectionIndex) => (
+                                <Box
+                                    key={sectionIndex}
+                                    borderWidth="1px"
+                                    borderRadius="lg"
+                                    p={4}
+                                    bg="white"
+                                    boxShadow="sm"
+                                    position="relative"
+                                    w="full"
+                                >
+                                    <VStack align="stretch" spacing={4} w="full">
+                                        <HStack
+                                            bg="gray.50"
+                                            p={3}
+                                            borderRadius="md"
+                                            position="sticky"
+                                            top="0"
+                                            zIndex="1"
+                                        >
+                                            <Icon
+                                                as={iconMap[section.icon] || FaLightbulb}
+                                                color="purple.500"
+                                                boxSize={5}
+                                            />
+                                            <Heading size="md">{section.title}</Heading>
+                                            <Badge
+                                                colorScheme="purple"
+                                                ml="auto"
+                                                fontSize="sm"
+                                                px={2}
                                             >
-                                                <Icon
-                                                    as={iconMap[section.icon] || FaLightbulb}
-                                                    color="purple.500"
-                                                    boxSize={5}
-                                                />
-                                                <Heading size="md">{section.title}</Heading>
-                                                <Badge
-                                                    colorScheme="purple"
-                                                    ml="auto"
-                                                    fontSize="sm"
-                                                    px={2}
-                                                >
-                                                    {section.insights?.length || 0} insights
-                                                </Badge>
-                                            </HStack>
+                                                {section.insights?.length || 0} insights
+                                            </Badge>
+                                        </HStack>
 
+                                        {isLoading ? (
+                                            <Box p={4}>
+                                                <HStack spacing={4}>
+                                                    <Spinner size="sm" color="purple.500" />
+                                                    <Text color="gray.600">Loading insights...</Text>
+                                                </HStack>
+                                            </Box>
+                                        ) : section.insights?.length === 0 ? (
+                                            <Box p={8} textAlign="center">
+                                                <VStack spacing={3}>
+                                                    <Icon
+                                                        as={iconMap[section.icon] || FaLightbulb}
+                                                        color="gray.300"
+                                                        boxSize={8}
+                                                    />
+                                                    <Text color="gray.500" fontWeight="medium">
+                                                        No insights available yet
+                                                    </Text>
+                                                    <Text color="gray.400" fontSize="sm">
+                                                        {section.title === "Pain & Frustration Analysis" && "Discover user pain points and frustrations"}
+                                                        {section.title === "Failed Solutions Analysis" && "Learn about attempted solutions that didn't work"}
+                                                        {section.title === "Question & Advice Mapping" && "Find common questions and expert advice"}
+                                                        {section.title === "Pattern Detection" && "Uncover trends and recurring themes"}
+                                                        {section.title === "Popular Products Analysis" && "Explore product preferences and market gaps"}
+                                                    </Text>
+                                                </VStack>
+                                            </Box>
+                                        ) : (
                                             <Box overflowX="auto" w="full">
                                                 <HStack spacing={4} pb={2}>
                                                     {section.insights?.map((insight, insightIndex) => {
@@ -1177,141 +1308,164 @@ export default function CommunityInsights() {
                                                     })}
                                                 </HStack>
                                             </Box>
-                                        </VStack>
-                                    </Box>
-                                ))}
-                            </VStack>
-
-                            {/* Avatar Insights */}
-                            {avatars.length > 0 && (
-                                <Box
-                                    borderWidth="1px"
-                                    borderRadius="lg"
-                                    p={4}
-                                    bg="white"
-                                    boxShadow="sm"
-                                    position="relative"
-                                    w="full"
-                                >
-                                    <VStack align="stretch" spacing={4} w="full">
-                                        <HStack
-                                            bg="gray.50"
-                                            p={3}
-                                            borderRadius="md"
-                                            position="sticky"
-                                            top="0"
-                                            zIndex="1"
-                                        >
-                                            <Icon
-                                                as={FaUserCircle}
-                                                color="purple.500"
-                                                boxSize={5}
-                                            />
-                                            <Heading size="md">Avatar Insights</Heading>
-                                            <Badge
-                                                colorScheme="purple"
-                                                ml="auto"
-                                                fontSize="sm"
-                                                px={2}
-                                            >
-                                                {avatars.length} avatars
-                                            </Badge>
-                                        </HStack>
-
-                                        <Box overflowX="auto" w="full">
-                                            <HStack spacing={4} pb={2}>
-                                                {avatars.map((avatar) => (
-                                                    <Box
-                                                        key={avatar.name}
-                                                        p={4}
-                                                        borderWidth="1px"
-                                                        borderRadius="md"
-                                                        _hover={{ bg: 'gray.50' }}
-                                                        transition="all 0.2s"
-                                                        minW="400px"
-                                                        maxW="400px"
-                                                        display="flex"
-                                                        flexDirection="column"
-                                                    >
-                                                        <VStack align="start" spacing={3} w="100%" height="100%">
-                                                            {/* Title and Type */}
-                                                            <VStack align="start" spacing={1} w="100%">
-                                                                <Text
-                                                                    fontWeight="semibold"
-                                                                    fontSize="md"
-                                                                    color="gray.700"
-                                                                >
-                                                                    {avatar.name}
-                                                                </Text>
-                                                                <Badge colorScheme="purple" fontSize="xs">
-                                                                    {avatar.type}
-                                                                </Badge>
-                                                            </VStack>
-
-                                                            {/* Avatar Insights */}
-                                                            {avatar.insights?.map((insight, index) => (
-                                                                <Box key={index} w="100%">
-                                                                    <Text fontSize="sm" color="gray.600">
-                                                                        {insight.description}
-                                                                    </Text>
-
-                                                                    <VStack align="start" spacing={3} mt={3}>
-                                                                        <Box w="100%">
-                                                                            <Text fontSize="sm" color="green.600" fontWeight="medium">
-                                                                                Needs:
-                                                                            </Text>
-                                                                            <UnorderedList pl={4} fontSize="sm">
-                                                                                {insight.needs.map((need, i) => (
-                                                                                    <ListItem key={i}>{need}</ListItem>
-                                                                                ))}
-                                                                            </UnorderedList>
-                                                                        </Box>
-                                                                        <Box w="100%">
-                                                                            <Text fontSize="sm" color="red.600" fontWeight="medium">
-                                                                                Pain Points:
-                                                                            </Text>
-                                                                            <UnorderedList pl={4} fontSize="sm">
-                                                                                {insight.pain_points.map((point, i) => (
-                                                                                    <ListItem key={i}>{point}</ListItem>
-                                                                                ))}
-                                                                            </UnorderedList>
-                                                                        </Box>
-                                                                        <Box w="100%">
-                                                                            <Text fontSize="sm" color="purple.600" fontWeight="medium">
-                                                                                Behaviors:
-                                                                            </Text>
-                                                                            <UnorderedList pl={4} fontSize="sm">
-                                                                                {insight.behaviors.map((behavior, i) => (
-                                                                                    <ListItem key={i}>{behavior}</ListItem>
-                                                                                ))}
-                                                                            </UnorderedList>
-                                                                        </Box>
-                                                                    </VStack>
-                                                                </Box>
-                                                            ))}
-                                                        </VStack>
-                                                    </Box>
-                                                ))}
-                                            </HStack>
-                                        </Box>
+                                        )}
                                     </VStack>
                                 </Box>
-                            )}
-
-                            {/* Debug box for raw response */}
-                            {perplexityResponse && (
-                                <Box mt={6} p={4} bg="gray.50" borderRadius="md">
-                                    <Text fontSize="lg" fontWeight="bold" mb={2}>
-                                        Debug: Raw Response
-                                    </Text>
-                                    <Text whiteSpace="pre-wrap" fontSize="sm">
-                                        {JSON.stringify(perplexityResponse, null, 2)}
-                                    </Text>
-                                </Box>
-                            )}
+                            ))}
                         </VStack>
-                    </Box>
-                )}
+
+                        {/* Avatar Insights */}
+                        <Box
+                            borderWidth="1px"
+                            borderRadius="lg"
+                            p={4}
+                            bg="white"
+                            boxShadow="sm"
+                            position="relative"
+                            w="full"
+                        >
+                            <VStack align="stretch" spacing={4} w="full">
+                                <HStack
+                                    bg="gray.50"
+                                    p={3}
+                                    borderRadius="md"
+                                    position="sticky"
+                                    top="0"
+                                    zIndex="1"
+                                >
+                                    <Icon
+                                        as={FaUserCircle}
+                                        color="purple.500"
+                                        boxSize={5}
+                                    />
+                                    <Heading size="md">Avatar Insights</Heading>
+                                    <Badge
+                                        colorScheme="purple"
+                                        ml="auto"
+                                        fontSize="sm"
+                                        px={2}
+                                    >
+                                        {avatars.length} avatars
+                                    </Badge>
+                                </HStack>
+
+                                {isLoading ? (
+                                    <Box p={4}>
+                                        <HStack spacing={4}>
+                                            <Spinner size="sm" color="purple.500" />
+                                            <Text color="gray.600">Loading avatars...</Text>
+                                        </HStack>
+                                    </Box>
+                                ) : avatars.length === 0 ? (
+                                    <Box p={8} textAlign="center">
+                                        <VStack spacing={3}>
+                                            <Icon
+                                                as={FaUserCircle}
+                                                color="gray.300"
+                                                boxSize={8}
+                                            />
+                                            <Text color="gray.500" fontWeight="medium">
+                                                No avatars available yet
+                                            </Text>
+                                            <Text color="gray.400" fontSize="sm">
+                                                Generate insights to discover user personas and their characteristics
+                                            </Text>
+                                        </VStack>
+                                    </Box>
+                                ) : (
+                                    <Box overflowX="auto" w="full">
+                                        <HStack spacing={4} pb={2}>
+                                            {avatars.map((avatar) => (
+                                                <Box
+                                                    key={avatar.name}
+                                                    p={4}
+                                                    borderWidth="1px"
+                                                    borderRadius="md"
+                                                    _hover={{ bg: 'gray.50' }}
+                                                    transition="all 0.2s"
+                                                    minW="400px"
+                                                    maxW="400px"
+                                                    display="flex"
+                                                    flexDirection="column"
+                                                >
+                                                    <VStack align="start" spacing={3} w="100%" height="100%">
+                                                        {/* Title and Type */}
+                                                        <VStack align="start" spacing={1} w="100%">
+                                                            <Text
+                                                                fontWeight="semibold"
+                                                                fontSize="md"
+                                                                color="gray.700"
+                                                            >
+                                                                {avatar.name}
+                                                            </Text>
+                                                            <Badge colorScheme="purple" fontSize="xs">
+                                                                {avatar.type}
+                                                            </Badge>
+                                                        </VStack>
+
+                                                        {/* Avatar Insights */}
+                                                        {avatar.insights?.map((insight, index) => (
+                                                            <Box key={index} w="100%">
+                                                                <Text fontSize="sm" color="gray.600">
+                                                                    {insight.description}
+                                                                </Text>
+
+                                                                <VStack align="start" spacing={3} mt={3}>
+                                                                    <Box w="100%">
+                                                                        <Text fontSize="sm" color="green.600" fontWeight="medium">
+                                                                            Needs:
+                                                                        </Text>
+                                                                        <UnorderedList pl={4} fontSize="sm">
+                                                                            {insight.needs.map((need, i) => (
+                                                                                <ListItem key={i}>{need}</ListItem>
+                                                                            ))}
+                                                                        </UnorderedList>
+                                                                    </Box>
+                                                                    <Box w="100%">
+                                                                        <Text fontSize="sm" color="red.600" fontWeight="medium">
+                                                                            Pain Points:
+                                                                        </Text>
+                                                                        <UnorderedList pl={4} fontSize="sm">
+                                                                            {insight.pain_points.map((point, i) => (
+                                                                                <ListItem key={i}>{point}</ListItem>
+                                                                            ))}
+                                                                        </UnorderedList>
+                                                                    </Box>
+                                                                    <Box w="100%">
+                                                                        <Text fontSize="sm" color="purple.600" fontWeight="medium">
+                                                                            Behaviors:
+                                                                        </Text>
+                                                                        <UnorderedList pl={4} fontSize="sm">
+                                                                            {insight.behaviors.map((behavior, i) => (
+                                                                                <ListItem key={i}>{behavior}</ListItem>
+                                                                            ))}
+                                                                        </UnorderedList>
+                                                                    </Box>
+                                                                </VStack>
+                                                            </Box>
+                                                        ))}
+                                                    </VStack>
+                                                </Box>
+                                            ))}
+                                        </HStack>
+                                    </Box>
+                                )}
+                            </VStack>
+                        </Box>
+
+                        {/* Debug box for raw response */}
+                        {perplexityResponse && (
+                            <Box mt={6} p={4} bg="gray.50" borderRadius="md">
+                                <Text fontSize="lg" fontWeight="bold" mb={2}>
+                                    Debug: Raw Response
+                                </Text>
+                                <Text whiteSpace="pre-wrap" fontSize="sm">
+                                    {JSON.stringify(perplexityResponse, null, 2)}
+                                </Text>
+                            </Box>
+                        )}
+                    </VStack>
+                </Box>
 
                 <Modal isOpen={isOpen} onClose={onClose} size="xl">
                     <ModalOverlay />
