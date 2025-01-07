@@ -466,33 +466,7 @@ export default function CommunityInsights() {
     const currentProject = projects.find(p => p.id === projectId);
     const { isOpen, onOpen, onClose } = useDisclosure();
     const [error, setError] = useState(null);
-    const [insights, setInsights] = useState([
-        {
-            title: "Pain & Frustration Analysis",
-            icon: "FaExclamationCircle",
-            insights: []
-        },
-        {
-            title: "Failed Solutions Analysis",
-            icon: "FaTimesCircle",
-            insights: []
-        },
-        {
-            title: "Question & Advice Mapping",
-            icon: "FaQuestionCircle",
-            insights: []
-        },
-        {
-            title: "Pattern Detection",
-            icon: "FaChartLine",
-            insights: []
-        },
-        {
-            title: "Popular Products Analysis",
-            icon: "FaShoppingCart",
-            insights: []
-        }
-    ]); // Initialize with predefined empty sections
+    const [insights, setInsights] = useState([]); // Start with empty array
     const [avatars, setAvatars] = useState([]);
     const [perplexityResponse, setPerplexityResponse] = useState('');
     const [loading, setLoading] = useState(false);
@@ -506,6 +480,7 @@ export default function CommunityInsights() {
     const [enrichedTopic, setEnrichedTopic] = useState('');
     const toast = useToast();
     const { user } = useAuthStore();
+    const [availableQueries, setAvailableQueries] = useState([]);
 
     useEffect(() => {
         fetchProjects();
@@ -517,20 +492,64 @@ export default function CommunityInsights() {
             if (!projectId || !user?.id) return;
 
             try {
-                const response = await api.get(`community-insights/${projectId}`);
+                // First fetch available queries
+                const queriesResponse = await api.get(`community-insights/${projectId}/community-insights/queries`);
+                const queries = queriesResponse.data || [];
+                setAvailableQueries(queries); // Store available queries in state
+
+                // Then fetch insights (either filtered by query or all)
+                const insightsEndpoint = selectedQuery
+                    ? `community-insights/${projectId}/community-insights?query=${encodeURIComponent(selectedQuery)}`
+                    : `community-insights/${projectId}/community-insights`;
+
+                const response = await api.get(insightsEndpoint);
+
                 if (response.data) {
-                    // Update insights while preserving the section structure
-                    const updatedInsights = insights.map(section => {
-                        // Find matching section in the response
-                        const responseSection = response.data.sections?.find(s => s.title === section.title);
-                        return {
-                            ...section,
-                            insights: responseSection?.insights || []
-                        };
+                    // Initialize empty sections if none exist
+                    const initialSections = [
+                        {
+                            title: "Pain & Frustration Analysis",
+                            icon: "FaExclamationCircle",
+                            insights: []
+                        },
+                        {
+                            title: "Failed Solutions Analysis",
+                            icon: "FaTimesCircle",
+                            insights: []
+                        },
+                        {
+                            title: "Question & Advice Mapping",
+                            icon: "FaQuestionCircle",
+                            insights: []
+                        },
+                        {
+                            title: "Pattern Detection",
+                            icon: "FaChartLine",
+                            insights: []
+                        },
+                        {
+                            title: "Popular Products Analysis",
+                            icon: "FaShoppingCart",
+                            insights: []
+                        }
+                    ];
+
+                    // Merge response sections with initial sections
+                    const updatedSections = initialSections.map(initialSection => {
+                        const responseSection = response.data.sections?.find(s => s.title === initialSection.title);
+                        if (responseSection) {
+                            return {
+                                ...initialSection,
+                                ...responseSection,
+                                insights: responseSection.insights || []
+                            };
+                        }
+                        return initialSection;
                     });
-                    setInsights(updatedInsights);
+
+                    setInsights(updatedSections);
                     setAvatars(response.data.avatars || []);
-                    setPerplexityResponse(response.data.raw_perplexity_response);
+                    setPerplexityResponse(response.data.raw_perplexity_response || '');
                 }
             } catch (error) {
                 // Only log the error, don't modify the insights state
@@ -538,10 +557,10 @@ export default function CommunityInsights() {
                     console.error("Error fetching initial insights:", error);
                 }
             }
-        };
+        }
 
         fetchInitialInsights();
-    }, [projectId, user?.id]);
+    }, [projectId, user?.id, selectedQuery]);
 
     // Delete insights by query
     const handleDeleteInsights = useCallback((query = null) => {
@@ -574,38 +593,58 @@ export default function CommunityInsights() {
         }
     }, [insights, toast]);
 
-    // Get unique queries from all insights
-    const getUniqueQueries = useCallback(() => {
-        const queries = new Set();
-        insights.forEach(section => {
-            section.insights?.forEach(insight => {
-                if (insight.query) {
-                    queries.add(insight.query);
-                }
-            });
-        });
-        return Array.from(queries);
-    }, [insights]);
-
     // Filter insights based on selected query
     const filteredInsights = useMemo(() => {
-        if (!selectedQuery) return insights;
+        if (!selectedQuery) {
+            // When no query is selected (All Queries), return all sections with all insights
+            return insights.map(section => ({
+                ...section,
+                insights: section.insights || []
+            })).filter(section => section.insights.length > 0);
+        }
 
+        // When a specific query is selected, filter insights
         return insights.map(section => ({
             ...section,
-            insights: section.insights?.filter(insight => insight.query === selectedQuery) || []
+            insights: section.insights?.filter(insight =>
+                insight.query && insight.query.toLowerCase() === selectedQuery.toLowerCase()
+            ) || []
         })).filter(section => section.insights.length > 0);
     }, [insights, selectedQuery]);
 
+    // Filter avatars based on selected query
+    const filteredAvatars = useMemo(() => {
+        if (!selectedQuery) {
+            // When no query is selected (All Queries), return all avatars with all insights
+            return avatars.map(avatar => ({
+                ...avatar,
+                insights: avatar.insights || []
+            })).filter(avatar => avatar.insights.length > 0);
+        }
+
+        // When a specific query is selected, filter avatars
+        return avatars.map(avatar => ({
+            ...avatar,
+            insights: avatar.insights?.filter(insight =>
+                insight.query && insight.query.toLowerCase() === selectedQuery.toLowerCase()
+            ) || []
+        })).filter(avatar => avatar.insights.length > 0);
+    }, [avatars, selectedQuery]);
+
     // Function to start polling for results
-    const startPolling = async (taskId) => {
+    const startPolling = useCallback(async (taskId) => {
         let attempts = 0;
         const maxAttempts = 60; // 5 minutes with 5-second intervals
         const pollInterval = 5000; // 5 seconds
 
         const poll = async () => {
             try {
-                const response = await api.get(`community-insights/${taskId}`);
+                // Use query parameter in polling endpoint if a query is selected
+                const pollingEndpoint = selectedQuery
+                    ? `community-insights/${taskId}?query=${encodeURIComponent(selectedQuery)}`
+                    : `community-insights/${taskId}`;
+
+                const response = await api.get(pollingEndpoint);
 
                 if (response.data.status === "completed") {
                     // Results are ready
@@ -614,17 +653,69 @@ export default function CommunityInsights() {
                     const updatedSections = insights.map(existingSection => {
                         const newSection = sections.find(s => s.title === existingSection.title);
                         if (newSection) {
+                            // Preserve existing insights and add new ones
+                            const existingInsights = existingSection.insights || [];
+                            const newInsights = newSection.insights || [];
+
+                            // Deduplicate insights based on title and query
+                            const uniqueInsights = [...existingInsights];
+                            newInsights.forEach(newInsight => {
+                                const exists = uniqueInsights.some(
+                                    existing =>
+                                        existing.title === newInsight.title &&
+                                        existing.query === newInsight.query
+                                );
+                                if (!exists) {
+                                    uniqueInsights.push(newInsight);
+                                }
+                            });
+
                             return {
                                 ...existingSection,
                                 ...newSection,
-                                insights: newSection.insights || []
+                                insights: uniqueInsights
                             };
                         }
                         return existingSection;
                     });
                     setInsights(updatedSections);
-                    setAvatars(response.data.avatars || []);
-                    setPerplexityResponse(response.data.raw_perplexity_response);
+
+                    // Handle avatars similarly - merge and deduplicate
+                    const newAvatars = response.data.avatars || [];
+                    const mergedAvatars = [...avatars];
+                    newAvatars.forEach(newAvatar => {
+                        const existingAvatarIndex = mergedAvatars.findIndex(a => a.name === newAvatar.name);
+                        if (existingAvatarIndex === -1) {
+                            mergedAvatars.push(newAvatar);
+                        } else {
+                            // Merge insights for existing avatar
+                            const existingAvatar = mergedAvatars[existingAvatarIndex];
+                            const uniqueInsights = [...(existingAvatar.insights || [])];
+                            newAvatar.insights?.forEach(newInsight => {
+                                const exists = uniqueInsights.some(
+                                    existing =>
+                                        existing.title === newInsight.title &&
+                                        existing.query === newInsight.query
+                                );
+                                if (!exists) {
+                                    uniqueInsights.push(newInsight);
+                                }
+                            });
+                            mergedAvatars[existingAvatarIndex] = {
+                                ...existingAvatar,
+                                ...newAvatar,
+                                insights: uniqueInsights
+                            };
+                        }
+                    });
+                    setAvatars(mergedAvatars);
+
+                    // Append new perplexity response
+                    const newResponse = response.data.raw_perplexity_response;
+                    if (newResponse) {
+                        setPerplexityResponse(prev => prev ? `${prev}\n\n${newResponse}` : newResponse);
+                    }
+
                     setLoading(false);
 
                     toast({
@@ -657,17 +748,12 @@ export default function CommunityInsights() {
                 });
                 return true;
             }
-        };
+        }
 
-        const pollUntilComplete = async () => {
-            const isComplete = await poll();
-            if (!isComplete) {
-                setTimeout(pollUntilComplete, pollInterval);
-            }
-        };
-
-        pollUntilComplete();
-    };
+        while (!(await poll())) {
+            await new Promise(resolve => setTimeout(resolve, pollInterval));
+        }
+    }, [insights, avatars, toast, selectedQuery]); // Added selectedQuery as dependency
 
     // Cleanup polling on unmount
     useEffect(() => {
@@ -797,17 +883,75 @@ export default function CommunityInsights() {
 
 
             } else if (response.data.status === "completed") {
-
                 // Results are ready immediately
                 const sections = response.data.sections || [];
                 // Merge new sections with existing empty sections
                 const updatedSections = insights.map(existingSection => {
                     const newSection = sections.find(s => s.title === existingSection.title);
-                    return newSection || existingSection;
+                    if (newSection) {
+                        // Preserve existing insights and add new ones
+                        const existingInsights = existingSection.insights || [];
+                        const newInsights = newSection.insights || [];
+
+                        // Deduplicate insights based on title and query
+                        const uniqueInsights = [...existingInsights];
+                        newInsights.forEach(newInsight => {
+                            const exists = uniqueInsights.some(
+                                existing =>
+                                    existing.title === newInsight.title &&
+                                    existing.query === newInsight.query
+                            );
+                            if (!exists) {
+                                uniqueInsights.push(newInsight);
+                            }
+                        });
+
+                        return {
+                            ...existingSection,
+                            ...newSection,
+                            insights: uniqueInsights
+                        };
+                    }
+                    return existingSection;
                 });
                 setInsights(updatedSections);
-                setAvatars(response.data.avatars || []);
-                setPerplexityResponse(response.data.raw_perplexity_response);
+
+                // Handle avatars similarly - merge and deduplicate
+                const newAvatars = response.data.avatars || [];
+                const mergedAvatars = [...avatars];
+                newAvatars.forEach(newAvatar => {
+                    const existingAvatarIndex = mergedAvatars.findIndex(a => a.name === newAvatar.name);
+                    if (existingAvatarIndex === -1) {
+                        mergedAvatars.push(newAvatar);
+                    } else {
+                        // Merge insights for existing avatar
+                        const existingAvatar = mergedAvatars[existingAvatarIndex];
+                        const uniqueInsights = [...(existingAvatar.insights || [])];
+                        newAvatar.insights?.forEach(newInsight => {
+                            const exists = uniqueInsights.some(
+                                existing =>
+                                    existing.title === newInsight.title &&
+                                    existing.query === newInsight.query
+                            );
+                            if (!exists) {
+                                uniqueInsights.push(newInsight);
+                            }
+                        });
+                        mergedAvatars[existingAvatarIndex] = {
+                            ...existingAvatar,
+                            ...newAvatar,
+                            insights: uniqueInsights
+                        };
+                    }
+                });
+                setAvatars(mergedAvatars);
+
+                // Append new perplexity response
+                const newResponse = response.data.raw_perplexity_response;
+                if (newResponse) {
+                    setPerplexityResponse(prev => prev ? `${prev}\n\n${newResponse}` : newResponse);
+                }
+
                 setLoading(false);
 
                 toast({
@@ -935,7 +1079,7 @@ export default function CommunityInsights() {
                 )}
 
                 {/* Query Filter */}
-                {getUniqueQueries().length > 0 && (
+                {availableQueries.length > 0 && (
                     <Box w="full" bg="white" p={4} borderRadius="lg" boxShadow="sm">
                         <HStack spacing={4}>
                             <Text fontWeight="medium">Filter by Query:</Text>
@@ -945,7 +1089,7 @@ export default function CommunityInsights() {
                                 maxW="400px"
                             >
                                 <option value="">All Queries</option>
-                                {getUniqueQueries().map((query) => (
+                                {availableQueries.map((query) => (
                                     <option key={query} value={query}>{query}</option>
                                 ))}
                             </Select>
@@ -965,7 +1109,7 @@ export default function CommunityInsights() {
 
                 {/* General Insights */}
                 <VStack spacing={6} w="full">
-                    {insights.map((section, index) => (
+                    {filteredInsights.map((section, index) => (
                         <Box
                             key={section.title}
                             w="full"
@@ -1024,7 +1168,7 @@ export default function CommunityInsights() {
                                     </Box>
                                 ) : (
                                     <Box overflowX="auto" pb={4} mx="-4" px={4}>
-                                        <HStack spacing={4} minW="max-content" py={4}>
+                                        <HStack spacing={4} minW="max-content" py={4} alignItems="stretch">
                                             {section.insights?.map((insight, insightIndex) => (
                                                 <Box
                                                     key={insightIndex}
@@ -1034,10 +1178,37 @@ export default function CommunityInsights() {
                                                     transition="all 0.2s"
                                                     minW="350px"
                                                     maxW="350px"
+                                                    h="400px"
+                                                    display="flex"
+                                                    flexDirection="column"
                                                     position="relative"
                                                 >
-                                                    <Box px={4} py={3}>
-                                                        <VStack align="start" spacing={3} w="full">
+                                                    <Box
+                                                        px={4}
+                                                        py={3}
+                                                        flex="1"
+                                                        display="flex"
+                                                        flexDirection="column"
+                                                        overflowY="auto"
+                                                        sx={{
+                                                            '&::-webkit-scrollbar': {
+                                                                width: '4px',
+                                                            },
+                                                            '&::-webkit-scrollbar-track': {
+                                                                width: '6px',
+                                                            },
+                                                            '&::-webkit-scrollbar-thumb': {
+                                                                background: 'gray.200',
+                                                                borderRadius: '24px',
+                                                            },
+                                                        }}
+                                                    >
+                                                        <VStack
+                                                            align="start"
+                                                            spacing={3}
+                                                            w="full"
+                                                            flex="1"
+                                                        >
                                                             <Text
                                                                 fontWeight="semibold"
                                                                 fontSize="md"
@@ -1225,7 +1396,7 @@ export default function CommunityInsights() {
                             </Box>
                         ) : (
                             <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
-                                {avatars.map((avatar, index) => (
+                                {filteredAvatars.map((avatar, index) => (
                                     <Box
                                         key={index}
                                         p={6}
