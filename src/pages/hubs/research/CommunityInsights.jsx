@@ -1080,9 +1080,9 @@ export default function CommunityInsights() {
 
                 {/* Query Filter */}
                 {availableQueries.length > 0 && (
-                    <Box w="full" bg="white" p={4} borderRadius="lg" boxShadow="sm">
+                    <Box w="full" bg="white" p={4} borderRadius="lg" boxShadow="sm" _dark={{ bg: '#1E2533', borderColor: '#2D3748' }}>
                         <HStack spacing={4}>
-                            <Text fontWeight="medium">Filter by Query:</Text>
+                            <Text fontWeight="medium" color="text.default">Filter by Query:</Text>
                             <Select
                                 value={selectedQuery || ''}
                                 onChange={(e) => setSelectedQuery(e.target.value || null)}
@@ -1117,6 +1117,10 @@ export default function CommunityInsights() {
                             borderRadius="lg"
                             boxShadow="sm"
                             overflow="hidden"
+                            _dark={{
+                                bg: '#1E2533',
+                                borderColor: '#2D3748'
+                            }}
                         >
                             {/* Section Header */}
                             <Box
@@ -1124,6 +1128,10 @@ export default function CommunityInsights() {
                                 bg="gray.50"
                                 borderBottom="1px"
                                 borderColor="gray.200"
+                                _dark={{
+                                    bg: '#141821',
+                                    borderColor: '#2D3748'
+                                }}
                             >
                                 <HStack spacing={3}>
                                     <Icon
@@ -1131,7 +1139,7 @@ export default function CommunityInsights() {
                                         color="purple.500"
                                         boxSize={5}
                                     />
-                                    <Text fontWeight="semibold" fontSize="lg">
+                                    <Text fontWeight="semibold" fontSize="lg" color="text.default">
                                         {section.title}
                                     </Text>
                                 </HStack>
@@ -1143,7 +1151,7 @@ export default function CommunityInsights() {
                                     <Box p={4}>
                                         <HStack spacing={4}>
                                             <Spinner size="sm" color="purple.500" />
-                                            <Text color="gray.600">Loading insights...</Text>
+                                            <Text color="gray.600" _dark={{ color: 'gray.400' }}>Loading insights...</Text>
                                         </HStack>
                                     </Box>
                                 ) : section.insights?.length === 0 ? (
@@ -1154,10 +1162,10 @@ export default function CommunityInsights() {
                                                 color="gray.300"
                                                 boxSize={8}
                                             />
-                                            <Text color="gray.500" fontWeight="medium">
+                                            <Text color="gray.500" _dark={{ color: 'gray.400' }} fontWeight="medium">
                                                 No insights available yet
                                             </Text>
-                                            <Text color="gray.400" fontSize="sm">
+                                            <Text color="gray.400" _dark={{ color: 'gray.500' }} fontSize="sm">
                                                 {section.title === "Pain & Frustration Analysis" && "Discover user pain points and frustrations"}
                                                 {section.title === "Failed Solutions Analysis" && "Learn about attempted solutions that didn't work"}
                                                 {section.title === "Question & Advice Mapping" && "Find common questions and expert advice"}
@@ -1168,17 +1176,28 @@ export default function CommunityInsights() {
                                     </Box>
                                 ) : (
                                     <Box overflowX="auto" pb={4} mx="-4" px={4}>
-                                        <HStack spacing={4} minW="max-content" py={4} alignItems="stretch">
+                                        <HStack
+                                            spacing={4}
+                                            minW="max-content"
+                                            py={4}
+                                            alignItems="center"
+                                            minH="500px"
+                                        >
                                             {section.insights?.map((insight, insightIndex) => (
                                                 <Box
                                                     key={insightIndex}
                                                     borderWidth="1px"
                                                     borderRadius="md"
                                                     _hover={{ bg: 'gray.50' }}
+                                                    _dark={{
+                                                        bg: '#1E2533',
+                                                        borderColor: '#2D3748',
+                                                        _hover: { bg: '#141821' }
+                                                    }}
                                                     transition="all 0.2s"
                                                     minW="350px"
                                                     maxW="350px"
-                                                    h="400px"
+                                                    h="500px"
                                                     display="flex"
                                                     flexDirection="column"
                                                     position="relative"
@@ -1189,7 +1208,7 @@ export default function CommunityInsights() {
                                                         flex="1"
                                                         display="flex"
                                                         flexDirection="column"
-                                                        overflowY="auto"
+                                                        overflowY={section.title === "Popular Products Analysis" ? "visible" : "auto"}
                                                         sx={{
                                                             '&::-webkit-scrollbar': {
                                                                 width: '4px',
@@ -1262,10 +1281,12 @@ export default function CommunityInsights() {
                                                                     p={3}
                                                                     bg="gray.50"
                                                                     borderRadius="md"
-                                                                    w="full"
-                                                                    fontSize="sm"
+                                                                    mb={3}
+                                                                    _dark={{
+                                                                        bg: '#0F131A'
+                                                                    }}
                                                                 >
-                                                                    <Text fontStyle="italic" color="gray.700">
+                                                                    <Text fontSize="sm" fontStyle="italic" color="text.muted">
                                                                         "{insight.evidence}"
                                                                     </Text>
                                                                 </Box>
@@ -1357,6 +1378,10 @@ export default function CommunityInsights() {
                         borderBottom="1px"
                         borderColor="gray.200"
                         borderTopRadius="lg"
+                        _dark={{
+                            bg: '#141821',
+                            borderColor: '#2D3748'
+                        }}
                     >
                         <HStack spacing={3}>
                             <Icon
@@ -1364,13 +1389,13 @@ export default function CommunityInsights() {
                                 color="purple.500"
                                 boxSize={5}
                             />
-                            <Text fontWeight="semibold" fontSize="lg">
+                            <Text fontWeight="semibold" fontSize="lg" color="text.default">
                                 User Avatars
                             </Text>
                         </HStack>
                     </Box>
 
-                    <Box p={4} bg="white" borderBottomRadius="lg" boxShadow="sm">
+                    <Box p={4} bg="white" borderBottomRadius="lg" boxShadow="sm" _dark={{ bg: '#1E2533' }}>
                         {loading ? (
                             <Box p={4}>
                                 <HStack spacing={4}>
@@ -1404,6 +1429,10 @@ export default function CommunityInsights() {
                                         borderRadius="lg"
                                         boxShadow="sm"
                                         borderWidth="1px"
+                                        _dark={{
+                                            bg: '#1E2533',
+                                            borderColor: '#2D3748'
+                                        }}
                                     >
                                         <VStack align="start" spacing={4}>
                                             <HStack spacing={3}>
@@ -1443,7 +1472,7 @@ export default function CommunityInsights() {
                                                         {insight.description}
                                                     </Text>
 
-                                                    <Box mt={2}>
+                                                    <Box mt={2} p={3} bg="gray.50" borderRadius="md" _dark={{ bg: '#0F131A' }}>
                                                         <Text fontSize="sm" color="gray.500" fontStyle="italic">
                                                             {insight.evidence}
                                                         </Text>
@@ -1499,35 +1528,39 @@ export default function CommunityInsights() {
                     borderRadius="md"
                     bg="gray.50"
                     overflowX="auto"
+                    _dark={{
+                        bg: '#141821',
+                        borderColor: '#2D3748'
+                    }}
                 >
                     <Accordion allowToggle>
-                        <AccordionItem>
+                        <AccordionItem border="none">
                             <h2>
-                                <AccordionButton>
+                                <AccordionButton _hover={{ bg: 'transparent' }}>
                                     <Box flex="1" textAlign="left">
-                                        <Heading size="sm">Debug: Structured Response</Heading>
+                                        <Heading size="sm" color="text.default">Debug: Structured Response</Heading>
                                     </Box>
                                     <AccordionIcon />
                                 </AccordionButton>
                             </h2>
                             <AccordionPanel>
-                                <pre style={{ whiteSpace: 'pre-wrap' }}>
+                                <pre style={{ whiteSpace: 'pre-wrap', color: 'inherit' }}>
                                     {JSON.stringify({ status: 'completed', sections: insights, avatars }, null, 2)}
                                 </pre>
                             </AccordionPanel>
                         </AccordionItem>
 
-                        <AccordionItem>
+                        <AccordionItem border="none">
                             <h2>
-                                <AccordionButton>
+                                <AccordionButton _hover={{ bg: 'transparent' }}>
                                     <Box flex="1" textAlign="left">
-                                        <Heading size="sm">Debug: Raw Perplexity Response</Heading>
+                                        <Heading size="sm" color="text.default">Debug: Raw Perplexity Response</Heading>
                                     </Box>
                                     <AccordionIcon />
                                 </AccordionButton>
                             </h2>
                             <AccordionPanel>
-                                <pre style={{ whiteSpace: 'pre-wrap' }}>
+                                <pre style={{ whiteSpace: 'pre-wrap', color: 'inherit' }}>
                                     {perplexityResponse ? JSON.stringify(perplexityResponse, null, 2) : 'No raw response available'}
                                 </pre>
                             </AccordionPanel>

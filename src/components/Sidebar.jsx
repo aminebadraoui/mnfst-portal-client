@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useCallback } from 'react';
 import {
     Box,
     VStack,
@@ -32,13 +32,12 @@ import {
 import { useAuthStore } from '../store/authStore';
 import ProjectsModal from './ProjectsModal';
 import useProjectStore from '../store/projectStore';
+import ThemeToggle from './ThemeToggle';
 
 const NavItem = ({ icon, children, to, onClick, indent = false, isHeader = false, rightElement, isActive = false, isExpanded = false, onToggle, isFeature = false }) => {
-    const bg = useColorModeValue('gray.100', 'gray.700');
     const location = useLocation();
     const isCurrentPath = to && location.pathname.startsWith(to);
     const featureColor = useColorModeValue('gray.600', 'gray.400');
-    const projectColor = useColorModeValue('gray.700', 'gray.200');
 
     return (
         <Flex
@@ -49,29 +48,30 @@ const NavItem = ({ icon, children, to, onClick, indent = false, isHeader = false
             py={isFeature ? "1.5" : "2"}
             cursor="pointer"
             color={isActive || isCurrentPath
-                ? "purple.500"
+                ? "accent.emphasized"
                 : isFeature
-                    ? featureColor
+                    ? "text.muted"
                     : isHeader
-                        ? projectColor
-                        : "gray.700"}
-            bg={isActive || isCurrentPath ? "purple.50" : "transparent"}
+                        ? "text.default"
+                        : "text.muted"}
+            bg={isActive || isCurrentPath ? "bg.selected" : "transparent"}
             _hover={{
-                bg: isFeature ? 'purple.50' : bg,
-                color: "purple.500",
+                bg: "bg.hover",
+                color: "accent.emphasized",
             }}
             onClick={onClick}
             role="group"
             borderLeft={isFeature ? "1px" : "0"}
-            borderLeftColor={isActive || isCurrentPath ? "purple.500" : "transparent"}
+            borderLeftColor={isActive || isCurrentPath ? "accent.default" : "transparent"}
             fontSize={isFeature ? "sm" : "md"}
             fontWeight={isHeader ? "semibold" : isFeature ? "normal" : "medium"}
+            transition="all 0.2s"
         >
             <Icon
                 as={icon}
                 mr="3"
                 fontSize={isFeature ? "14" : "16"}
-                color={isActive || isCurrentPath ? "purple.500" : "inherit"}
+                color="inherit"
             />
             <Text flex="1">{children}</Text>
             {rightElement && (
@@ -83,6 +83,7 @@ const NavItem = ({ icon, children, to, onClick, indent = false, isHeader = false
                     ml="2"
                     fontSize="12"
                     transition="all 0.2s"
+                    color="inherit"
                 />
             )}
         </Flex>
@@ -116,17 +117,30 @@ const ProjectFeatures = ({ projectId }) => {
 };
 
 const Sidebar = () => {
-    const clearAuth = useAuthStore((state) => state.clearAuth);
-    const navigate = useNavigate();
-    const bg = useColorModeValue('white', 'gray.800');
-    const borderColor = useColorModeValue('gray.200', 'gray.700');
-    const { isOpen, onOpen, onClose } = useDisclosure();
-    const projects = useProjectStore((state) => state.projects);
     const location = useLocation();
+    const navigate = useNavigate();
+    const clearAuth = useAuthStore((state) => state.clearAuth);
+    const { isOpen, onOpen, onClose } = useDisclosure();
+
+    const projects = useProjectStore((state) => state.projects);
+    const fetchProjects = useProjectStore((state) => state.fetchProjects);
+
     const [expandedProject, setExpandedProject] = React.useState(null);
 
+    // Fetch projects on mount
+    useEffect(() => {
+        const loadProjects = async () => {
+            try {
+                await fetchProjects();
+            } catch (error) {
+                console.error('Failed to load projects:', error);
+            }
+        };
+        loadProjects();
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
     // Find current project from URL if we're in a project route
-    React.useEffect(() => {
+    useEffect(() => {
         const match = location.pathname.match(/\/projects\/([^/]+)/);
         if (match) {
             setExpandedProject(match[1]);
@@ -150,49 +164,47 @@ const Sidebar = () => {
         <Box
             w={{ base: 'full', md: '64' }}
             h="full"
-            bg={bg}
+            bg="sidebar.bg"
             borderRight="1px"
-            borderRightColor={borderColor}
+            borderRightColor="sidebar.border"
             pos="fixed"
             left="0"
             top="0"
             overflowY="auto"
         >
             <VStack h="full" spacing={4} align="stretch" py={5}>
-                <Text
-                    fontSize="2xl"
-                    color="purple.500"
-                    fontWeight="bold"
-                    textAlign="center"
-                    mb={4}
-                >
-                    MNFST
-                </Text>
+                <Flex px={4} align="center" justify="space-between">
+                    <Text
+                        fontSize="2xl"
+                        color="accent.default"
+                        fontWeight="bold"
+                    >
+                        MNFST
+                    </Text>
+                    <ThemeToggle />
+                </Flex>
 
                 <VStack spacing={2} align="stretch">
-                    <NavItem
-                        icon={FaProjectDiagram}
-                        to="/projects"
-                        rightElement={
-                            <Button
-                                size="xs"
-                                variant="ghost"
-                                colorScheme="purple"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    onOpen();
-                                }}
-                                p={1}
-                            >
-                                <Icon as={FaPlus} fontSize="12" />
-                            </Button>
-                        }
-                        isHeader={true}
-                    >
-                        Projects
+                    <NavItem icon={FaHome} to="/chat" isHeader={true}>
+                        Home
                     </NavItem>
-                    {projects.map((project) => (
+                    <Divider opacity="0.1" />
+                    <Button
+                        variant="ghost"
+                        onClick={onOpen}
+                        leftIcon={<FaPlus />}
+                        justifyContent="flex-start"
+                        px="4"
+                        w="full"
+                        color="text.muted"
+                        _hover={{
+                            bg: "bg.hover",
+                            color: "accent.emphasized"
+                        }}
+                    >
+                        New Project
+                    </Button>
+                    {projects?.map((project) => (
                         <React.Fragment key={project.id}>
                             <NavItem
                                 icon={FaFolder}
@@ -213,27 +225,30 @@ const Sidebar = () => {
                     <NavItem icon={FaHome} to="/dashboard">
                         Agents Dashboard
                     </NavItem>
-                    <NavItem
-                        icon={FaHistory}
-                        to="/past-runs"
-                        isHeader={true}
-                    >
+                    <NavItem icon={FaHistory} to="/past-runs">
                         Past Runs
                     </NavItem>
-                </VStack>
-
-                <Divider my={4} />
-
-                <VStack mt="auto" spacing={2} align="stretch">
                     <NavItem icon={FaUser} to="/profile">
                         Profile
                     </NavItem>
-                    <NavItem icon={FaSignOutAlt} onClick={handleLogout}>
+                    <Button
+                        variant="ghost"
+                        onClick={handleLogout}
+                        leftIcon={<FaSignOutAlt />}
+                        justifyContent="flex-start"
+                        px="4"
+                        w="full"
+                        mt="auto"
+                        color="text.muted"
+                        _hover={{
+                            bg: "bg.hover",
+                            color: "accent.emphasized"
+                        }}
+                    >
                         Logout
-                    </NavItem>
+                    </Button>
                 </VStack>
             </VStack>
-
             <ProjectsModal isOpen={isOpen} onClose={onClose} />
         </Box>
     );

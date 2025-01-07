@@ -1,6 +1,6 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { ChakraProvider } from '@chakra-ui/react';
+import { ChakraProvider, ColorModeScript } from '@chakra-ui/react';
 import theme from './theme';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -13,6 +13,7 @@ import { useAuthStore } from './store/authStore';
 import ProjectRoutes from './routes/projectRoutes';
 import GlobalLoadingBanner from './components/GlobalLoadingBanner';
 import useLoadingStore from './store/loadingStore';
+import Chat from './components/Chat/Chat';
 
 const PrivateRoute = ({ children }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -25,6 +26,7 @@ function App() {
 
   return (
     <ChakraProvider theme={theme}>
+      <ColorModeScript initialColorMode={theme.config.initialColorMode} />
       <GlobalLoadingBanner isVisible={isLoading} keyword={keyword} />
       <Routes>
         {/* Auth Routes */}
@@ -32,7 +34,8 @@ function App() {
         <Route path="/register" element={<Register />} />
 
         {/* Protected Routes */}
-        <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+        <Route path="/" element={<PrivateRoute><Chat /></PrivateRoute>} />
+        <Route path="/chat" element={<PrivateRoute><Chat /></PrivateRoute>} />
         <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/projects" element={<PrivateRoute><ProjectList /></PrivateRoute>} />
         <Route path="/past-runs" element={<PrivateRoute><PastRuns /></PrivateRoute>} />
@@ -42,7 +45,7 @@ function App() {
         <Route path="/projects/:projectId/*" element={<PrivateRoute><ProjectRoutes /></PrivateRoute>} />
 
         {/* Fallback Route */}
-        <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
+        <Route path="*" element={<Navigate to={isAuthenticated ? "/chat" : "/login"} replace />} />
       </Routes>
     </ChakraProvider>
   );
