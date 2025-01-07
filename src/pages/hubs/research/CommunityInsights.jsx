@@ -41,8 +41,12 @@ import {
     SimpleGrid,
     Wrap,
     WrapItem,
+    Alert,
+    AlertIcon,
+    AlertDescription,
+    Select,
 } from '@chakra-ui/react';
-import { FaExclamationCircle, FaQuestionCircle, FaChartLine, FaLightbulb, FaMagic, FaUserCircle } from 'react-icons/fa';
+import { FaExclamationCircle, FaQuestionCircle, FaChartLine, FaLightbulb, FaMagic, FaUserCircle, FaUser, FaPlus } from 'react-icons/fa';
 import { api } from '../../../services/api';
 import axios from 'axios';
 import { useParams } from 'react-router-dom';
@@ -489,20 +493,18 @@ export default function CommunityInsights() {
             insights: []
         }
     ]); // Initialize with predefined empty sections
+    const [avatars, setAvatars] = useState([]);
+    const [perplexityResponse, setPerplexityResponse] = useState('');
+    const [loading, setLoading] = useState(false);
     const [topicKeyword, setTopicKeyword] = useState('');
     const [sourceUrls, setSourceUrls] = useState('');
     const [productUrls, setProductUrls] = useState('');
     const [useOnlySpecifiedSources, setUseOnlySpecifiedSources] = useState(false);
-    const [taskId, setTaskId] = useState(null);
-    const [pollingInterval, setPollingInterval] = useState(null);
-    const toast = useToast();
-    const setLoading = useLoadingStore(state => state.setLoading);
-    const isLoading = useLoadingStore(state => state.isLoading);
-    const [selectedPersona, setSelectedPersona] = useState(null);
-    const [queries, setQueries] = useState([]);
-    const [avatars, setAvatars] = useState([]); // Initialize empty
-    const [perplexityResponse, setPerplexityResponse] = useState(null);
     const [selectedQuery, setSelectedQuery] = useState(null);
+    const [selectedPersona, setSelectedPersona] = useState(null);
+    const [userQuery, setUserQuery] = useState('');
+    const [enrichedTopic, setEnrichedTopic] = useState('');
+    const toast = useToast();
     const { user } = useAuthStore();
 
     useEffect(() => {
@@ -596,67 +598,83 @@ export default function CommunityInsights() {
     }, [insights, selectedQuery]);
 
     // Function to start polling for results
-    const startPolling = useCallback((taskId) => {
-        const interval = setInterval(async () => {
+    const startPolling = async (taskId) => {
+        let attempts = 0;
+        const maxAttempts = 60; // 5 minutes with 5-second intervals
+        const pollInterval = 5000; // 5 seconds
+
+        const poll = async () => {
             try {
-                const response = await api.get(`community-insights/tasks/${taskId}`);
-                if (!response.data || response.data.status === "processing") {
-                    return; // Keep polling
+                const response = await api.get(`community-insights/${taskId}`);
+
+                if (response.data.status === "completed") {
+                    // Results are ready
+                    const sections = response.data.sections || [];
+                    // Merge new sections with existing empty sections
+                    const updatedSections = insights.map(existingSection => {
+                        const newSection = sections.find(s => s.title === existingSection.title);
+                        if (newSection) {
+                            return {
+                                ...existingSection,
+                                ...newSection,
+                                insights: newSection.insights || []
+                            };
+                        }
+                        return existingSection;
+                    });
+                    setInsights(updatedSections);
+                    setAvatars(response.data.avatars || []);
+                    setPerplexityResponse(response.data.raw_perplexity_response);
+                    setLoading(false);
+
+                    toast({
+                        title: "Insights Generated",
+                        description: "Successfully generated community insights.",
+                        status: "success",
+                        duration: 5000,
+                        isClosable: true,
+                    });
+                    return true;
                 }
 
-                // Store the raw Perplexity response
-                setPerplexityResponse(response.data.raw_perplexity_response);
-                console.log('Setting raw Perplexity response:', response.data.raw_perplexity_response);
+                attempts++;
+                if (attempts >= maxAttempts) {
+                    throw new Error("Polling timeout: insights generation is taking too long");
+                }
 
-                // Results are ready
-                setInsights(response.data.sections || []);
-                console.log('Setting insights:', response.data.sections);
-
-                // Set avatars and log them
-                const avatars = response.data.avatars || [];
-                console.log('Setting avatars:', avatars);
-                setAvatars(avatars);
-
-                setLoading(false);
-                clearInterval(interval);
-                setPollingInterval(null);
-
-                toast({
-                    title: "Insights Generated",
-                    description: "Successfully generated community insights.",
-                    status: "success",
-                    duration: 5000,
-                    isClosable: true,
-                });
-
+                return false;
             } catch (error) {
-                console.error("Error polling for results:", error);
-                setError("Error fetching results. Please try again.");
+                console.error("Error polling for insights:", error);
+                setError(error.message || "Failed to get insights. Please try again.");
                 setLoading(false);
-                clearInterval(interval);
-                setPollingInterval(null);
 
                 toast({
                     title: "Error",
-                    description: "Failed to fetch results. Please try again.",
+                    description: error.message || "Failed to get insights. Please try again.",
                     status: "error",
                     duration: 5000,
                     isClosable: true,
                 });
+                return true;
             }
-        }, 2000); // Poll every 2 seconds
+        };
 
-        setPollingInterval(interval);
-    }, [toast, setLoading]);
+        const pollUntilComplete = async () => {
+            const isComplete = await poll();
+            if (!isComplete) {
+                setTimeout(pollUntilComplete, pollInterval);
+            }
+        };
+
+        pollUntilComplete();
+    };
 
     // Cleanup polling on unmount
     useEffect(() => {
         return () => {
-            if (pollingInterval) {
-                clearInterval(pollingInterval);
-            }
+            setLoading(false);
         };
-    }, [pollingInterval]);
+    }, []);
 
     const handleAddQuery = (query) => {
         if (!query.trim()) {
@@ -674,10 +692,6 @@ export default function CommunityInsights() {
     };
 
     const handleGenerateWithAI = async () => {
-        console.log('Current project:', currentProject);
-        console.log('Projects:', projects);
-        console.log('Project ID:', projectId);
-
         if (!currentProject) {
             toast({
                 title: "No project found",
@@ -701,14 +715,14 @@ export default function CommunityInsights() {
         }
 
         const description = currentProject.description || currentProject.project?.description;
-        setLoading(true, `Researching for "${description}"`);
+        setLoading(true);
         try {
             const response = await api.post('ai/generate-query', {
                 description: description
             });
 
             if (response.data.query) {
-                setTopicKeyword(response.data.query);
+                setUserQuery(response.data.query);
                 toast({
                     title: "Query Generated",
                     description: "AI has generated a query for you",
@@ -731,72 +745,20 @@ export default function CommunityInsights() {
     };
 
     const handleGenerateInsights = async () => {
-        if (!topicKeyword.trim()) {
+        if (!userQuery) {
             toast({
-                title: "No query provided",
-                description: "Please enter a query or generate one with AI",
+                title: "Error",
+                description: "Please enter a query.",
                 status: "error",
-                duration: 3000,
+                duration: 5000,
                 isClosable: true,
             });
             return;
         }
-
-        if (!currentProject) {
-            toast({
-                title: "No project found",
-                description: "Could not find the current project",
-                status: "error",
-                duration: 3000,
-                isClosable: true,
-            });
-            return;
-        }
-
-        const projectDescription = currentProject.description || currentProject.project?.description;
-        if (!projectDescription) {
-            toast({
-                title: "No project description",
-                description: "Please add a description to your project",
-                status: "error",
-                duration: 3000,
-                isClosable: true,
-            });
-            return;
-        }
-
-        // Store the original user query
-        const userQuery = topicKeyword.trim();
-
-        // Combine topic keyword with project description
-        const enrichedTopic = `${userQuery} (Project Context: ${projectDescription})`;
 
         setLoading(true);
         setError(null);
-        setInsights([]);
-        setAvatars([]);
         onClose();
-
-        // Use mock data if USE_MOCK_DATA is true
-        const USE_MOCK_DATA = false; // Toggle this to switch between mock and real data
-
-        if (USE_MOCK_DATA) {
-            setTimeout(() => {
-                setInsights(mockData.sections);
-                setAvatars(mockData.avatars);
-                setPerplexityResponse(JSON.stringify(mockData, null, 2));
-                setLoading(false);
-
-                toast({
-                    title: "Insights Generated (Mock)",
-                    description: "Successfully generated mock insights.",
-                    status: "success",
-                    duration: 5000,
-                    isClosable: true,
-                });
-            }, 1000);
-            return;
-        }
 
         try {
             if (!user?.id) {
@@ -805,6 +767,9 @@ export default function CommunityInsights() {
             if (!projectId) {
                 throw new Error('Project ID is required');
             }
+
+            const projectDescription = currentProject.description || currentProject.project?.description;
+            const enrichedTopic = `${userQuery} (Project Context: ${projectDescription})`;
 
             const response = await api.post('community-insights', {
                 topic_keyword: enrichedTopic,
@@ -815,6 +780,8 @@ export default function CommunityInsights() {
                 user_id: user.id,
                 project_id: projectId
             });
+
+            console.log(response.data);
 
             if (response.data.status === "processing" && response.data.task_id) {
                 // Start polling for results using task_id
@@ -827,9 +794,18 @@ export default function CommunityInsights() {
                     duration: 5000,
                     isClosable: true,
                 });
+
+
             } else if (response.data.status === "completed") {
+
                 // Results are ready immediately
-                setInsights(response.data.sections || []);
+                const sections = response.data.sections || [];
+                // Merge new sections with existing empty sections
+                const updatedSections = insights.map(existingSection => {
+                    const newSection = sections.find(s => s.title === existingSection.title);
+                    return newSection || existingSection;
+                });
+                setInsights(updatedSections);
                 setAvatars(response.data.avatars || []);
                 setPerplexityResponse(response.data.raw_perplexity_response);
                 setLoading(false);
@@ -846,7 +822,7 @@ export default function CommunityInsights() {
             }
         } catch (error) {
             console.error("Error generating insights:", error);
-            setError("Error generating insights. Please try again.");
+            setError(error.message || "Failed to generate insights. Please try again.");
             setLoading(false);
             toast({
                 title: "Error",
@@ -885,12 +861,16 @@ export default function CommunityInsights() {
                 {avatar.insights && avatar.insights.map((insight, index) => {
                     console.log('Rendering insight:', insight);
                     return (
+
                         <Box key={index} p={4} bg="white" borderRadius="md" boxShadow="sm" mb={2}>
-                            {insight.query && (
+                            {(
                                 <Badge colorScheme="purple" fontSize="sm" px={2} py={1} mb={2}>
                                     Query: {insight.query}
                                 </Badge>
                             )}
+                            <Text fontWeight="semibold" mb={2}>
+                                {insight.title}
+                            </Text>
                             <Text fontWeight="semibold" mb={2}>
                                 {insight.title}
                             </Text>
@@ -926,638 +906,419 @@ export default function CommunityInsights() {
     }, []);
 
     return (
-        <Container maxW="container.xl" py={8}>
-            <VStack spacing={6} align="stretch">
-                <HStack justify="space-between">
-                    <Heading size="lg">Community Insights</Heading>
+        <Box p={6}>
+            <VStack spacing={6} align="stretch" w="full">
+                {/* Header */}
+                <HStack justify="space-between" w="full">
+                    <VStack align="start" spacing={1}>
+                        <Heading size="lg">Community Insights</Heading>
+                        <Text color="gray.600">
+                            Analyze community discussions and uncover valuable insights
+                        </Text>
+                    </VStack>
                     <Button
+                        leftIcon={<FaPlus />}
                         colorScheme="purple"
                         onClick={onOpen}
-                        isLoading={isLoading}
+                        isLoading={loading}
                     >
                         Generate Insights
                     </Button>
                 </HStack>
 
-                <Box overflowX="auto">
-                    <VStack spacing={6} align="stretch">
-                        {/* Query Filter and Delete Options */}
-                        {insights.length > 0 && (
-                            <Box w="full" borderWidth="1px" borderRadius="lg" p={4} bg="white">
-                                <VStack spacing={4} align="stretch">
-                                    <HStack justify="space-between">
-                                        <Text fontWeight="medium">Filter by Query</Text>
-                                        {/* Delete Options */}
-                                        <HStack spacing={2}>
-                                            {selectedQuery && (
-                                                <Button
-                                                    size="sm"
-                                                    colorScheme="red"
-                                                    variant="outline"
-                                                    onClick={() => handleDeleteInsights(selectedQuery)}
-                                                >
-                                                    Delete Selected Query
-                                                </Button>
-                                            )}
-                                            <Button
-                                                size="sm"
-                                                colorScheme="red"
-                                                variant="outline"
-                                                onClick={() => {
-                                                    if (window.confirm('Are you sure you want to delete all insights?')) {
-                                                        handleDeleteInsights();
-                                                    }
-                                                }}
-                                            >
-                                                Delete All
-                                            </Button>
-                                        </HStack>
-                                    </HStack>
+                {/* Error Message */}
+                {error && (
+                    <Alert status="error">
+                        <AlertIcon />
+                        <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                )}
 
-                                    {/* Query Filter */}
-                                    <Wrap spacing={2} align="center">
-                                        <WrapItem display="flex" alignItems="center">
-                                            <Badge
-                                                colorScheme={!selectedQuery ? "purple" : "gray"}
-                                                fontSize="sm"
-                                                px={3}
-                                                py={2}
-                                                cursor="pointer"
-                                                onClick={() => setSelectedQuery(null)}
-                                                _hover={{ opacity: 0.8 }}
-                                                borderRadius="full"
-                                                whiteSpace="normal"
-                                                textAlign="left"
-                                            >
-                                                All Queries
-                                            </Badge>
-                                        </WrapItem>
-                                        {getUniqueQueries().map((query) => (
-                                            <WrapItem key={query} display="flex" alignItems="center">
-                                                <Badge
-                                                    colorScheme={selectedQuery === query ? "purple" : "gray"}
-                                                    fontSize="sm"
-                                                    px={3}
-                                                    py={2}
-                                                    cursor="pointer"
-                                                    onClick={() => setSelectedQuery(query)}
-                                                    _hover={{ opacity: 0.8 }}
-                                                    borderRadius="full"
-                                                    whiteSpace="normal"
-                                                    textAlign="left"
-                                                    maxW={{ base: "full", md: "400px" }}
-                                                >
-                                                    {query}
-                                                </Badge>
-                                            </WrapItem>
-                                        ))}
-                                    </Wrap>
-                                </VStack>
-                            </Box>
-                        )}
-
-                        {/* General Insights */}
-                        <VStack spacing={6} w="full">
-                            {(isLoading ? [
-                                {
-                                    title: "Pain & Frustration Analysis",
-                                    icon: "FaExclamationCircle",
-                                    insights: []
-                                },
-                                {
-                                    title: "Failed Solutions Analysis",
-                                    icon: "FaTimesCircle",
-                                    insights: []
-                                },
-                                {
-                                    title: "Question & Advice Mapping",
-                                    icon: "FaQuestionCircle",
-                                    insights: []
-                                },
-                                {
-                                    title: "Pattern Detection",
-                                    icon: "FaChartLine",
-                                    insights: []
-                                },
-                                {
-                                    title: "Popular Products Analysis",
-                                    icon: "FaShoppingCart",
-                                    insights: []
-                                }
-                            ] : insights).map((section, sectionIndex) => (
-                                <Box
-                                    key={sectionIndex}
-                                    borderWidth="1px"
-                                    borderRadius="lg"
-                                    p={4}
-                                    bg="white"
-                                    boxShadow="sm"
-                                    position="relative"
-                                    w="full"
+                {/* Query Filter */}
+                {getUniqueQueries().length > 0 && (
+                    <Box w="full" bg="white" p={4} borderRadius="lg" boxShadow="sm">
+                        <HStack spacing={4}>
+                            <Text fontWeight="medium">Filter by Query:</Text>
+                            <Select
+                                value={selectedQuery || ''}
+                                onChange={(e) => setSelectedQuery(e.target.value || null)}
+                                maxW="400px"
+                            >
+                                <option value="">All Queries</option>
+                                {getUniqueQueries().map((query) => (
+                                    <option key={query} value={query}>{query}</option>
+                                ))}
+                            </Select>
+                            {selectedQuery && (
+                                <Button
+                                    size="sm"
+                                    colorScheme="red"
+                                    variant="ghost"
+                                    onClick={() => handleDeleteInsights(selectedQuery)}
                                 >
-                                    <VStack align="stretch" spacing={4} w="full">
-                                        <HStack
-                                            bg="gray.50"
-                                            p={3}
-                                            borderRadius="md"
-                                            position="sticky"
-                                            top="0"
-                                            zIndex="1"
-                                        >
-                                            <Icon
-                                                as={iconMap[section.icon] || FaLightbulb}
-                                                color="purple.500"
-                                                boxSize={5}
-                                            />
-                                            <Heading size="md">{section.title}</Heading>
-                                            <Badge
-                                                colorScheme="purple"
-                                                ml="auto"
-                                                fontSize="sm"
-                                                px={2}
-                                            >
-                                                {section.insights?.length || 0} insights
-                                            </Badge>
-                                        </HStack>
+                                    Delete Query Results
+                                </Button>
+                            )}
+                        </HStack>
+                    </Box>
+                )}
 
-                                        {isLoading ? (
-                                            <Box p={4}>
-                                                <HStack spacing={4}>
-                                                    <Spinner size="sm" color="purple.500" />
-                                                    <Text color="gray.600">Loading insights...</Text>
-                                                </HStack>
-                                            </Box>
-                                        ) : section.insights?.length === 0 ? (
-                                            <Box p={8} textAlign="center">
-                                                <VStack spacing={3}>
-                                                    <Icon
-                                                        as={iconMap[section.icon] || FaLightbulb}
-                                                        color="gray.300"
-                                                        boxSize={8}
-                                                    />
-                                                    <Text color="gray.500" fontWeight="medium">
-                                                        No insights available yet
-                                                    </Text>
-                                                    <Text color="gray.400" fontSize="sm">
-                                                        {section.title === "Pain & Frustration Analysis" && "Discover user pain points and frustrations"}
-                                                        {section.title === "Failed Solutions Analysis" && "Learn about attempted solutions that didn't work"}
-                                                        {section.title === "Question & Advice Mapping" && "Find common questions and expert advice"}
-                                                        {section.title === "Pattern Detection" && "Uncover trends and recurring themes"}
-                                                        {section.title === "Popular Products Analysis" && "Explore product preferences and market gaps"}
-                                                    </Text>
-                                                </VStack>
-                                            </Box>
-                                        ) : (
-                                            <Box overflowX="auto" w="full">
-                                                <HStack spacing={4} pb={2}>
-                                                    {section.insights?.map((insight, insightIndex) => {
-                                                        if (insight.platform || insight.positive_feedback || insight.negative_feedback) {
-                                                            return (
-                                                                <Box
-                                                                    key={insightIndex}
-                                                                    p={4}
-                                                                    borderWidth="1px"
-                                                                    borderRadius="md"
-                                                                    _hover={{ bg: 'gray.50' }}
-                                                                    transition="all 0.2s"
-                                                                    minW="400px"
-                                                                    maxW="400px"
-                                                                >
-                                                                    <VStack align="start" spacing={4} w="100%">
-                                                                        {/* Title */}
-                                                                        <Heading size="md">
-                                                                            {insight.title}
-                                                                        </Heading>
-
-                                                                        {/* Query Badge */}
-                                                                        <Badge
-                                                                            colorScheme="purple"
-                                                                            fontSize="sm"
-                                                                            px={3}
-                                                                            py={2}
-                                                                            whiteSpace="normal"
-                                                                            wordBreak="break-word"
-                                                                            display="block"
-                                                                            textAlign="left"
-                                                                            w="100%"
-                                                                            bg="purple.50"
-                                                                        >
-                                                                            QUERY: {insight.query}
-                                                                        </Badge>
-
-                                                                        {/* Platform */}
-                                                                        <Box w="100%">
-                                                                            <Text as="span" fontWeight="semibold">Platform: </Text>
-                                                                            <Text as="span" whiteSpace="normal" wordBreak="break-word" display="inline">
-                                                                                {insight.platform}
-                                                                            </Text>
-                                                                        </Box>
-
-                                                                        {/* Price Range */}
-                                                                        <Box w="100%">
-                                                                            <Text as="span" fontWeight="semibold">Price Range: </Text>
-                                                                            <Text as="span" whiteSpace="normal" wordBreak="break-word" display="inline">
-                                                                                {insight.price_range}
-                                                                            </Text>
-                                                                        </Box>
-
-                                                                        {/* Engagement */}
-                                                                        <Box w="100%">
-                                                                            <Text as="span" fontWeight="semibold">Engagement: </Text>
-                                                                            <Text as="span" whiteSpace="normal" wordBreak="break-word" display="inline">
-                                                                                {insight.engagement_metrics}
-                                                                            </Text>
-                                                                        </Box>
-
-                                                                        {/* Correlation */}
-                                                                        <Box w="100%">
-                                                                            <Text as="span" fontWeight="semibold">Correlation: </Text>
-                                                                            <Text as="span" whiteSpace="normal" wordBreak="break-word" display="inline">
-                                                                                {insight.correlation}
-                                                                            </Text>
-                                                                        </Box>
-
-                                                                        {/* Significance */}
-                                                                        <Box w="100%">
-                                                                            <Text as="span" fontWeight="semibold">Significance: </Text>
-                                                                            <Text as="span" whiteSpace="normal" wordBreak="break-word" display="inline">
-                                                                                {insight.significance}
-                                                                            </Text>
-                                                                        </Box>
-
-                                                                        {/* Positive Feedback */}
-                                                                        <Box w="100%">
-                                                                            <Text color="green.600" fontWeight="semibold">
-                                                                                Positive Feedback:
-                                                                            </Text>
-                                                                            <UnorderedList pl={4} mt={1}>
-                                                                                {insight.positive_feedback?.map((point, idx) => (
-                                                                                    <ListItem key={idx}>{point}</ListItem>
-                                                                                ))}
-                                                                            </UnorderedList>
-                                                                        </Box>
-
-                                                                        {/* Negative Feedback */}
-                                                                        <Box w="100%">
-                                                                            <Text color="red.600" fontWeight="semibold">
-                                                                                Negative Feedback:
-                                                                            </Text>
-                                                                            <UnorderedList pl={4} mt={1}>
-                                                                                {insight.negative_feedback?.map((point, idx) => (
-                                                                                    <ListItem key={idx}>{point}</ListItem>
-                                                                                ))}
-                                                                            </UnorderedList>
-                                                                        </Box>
-
-                                                                        {/* Market Gap */}
-                                                                        <Box w="100%">
-                                                                            <Text color="purple.600" fontWeight="semibold">
-                                                                                Market Gap:
-                                                                            </Text>
-                                                                            <Text mt={1}>{insight.market_gap}</Text>
-                                                                        </Box>
-                                                                    </VStack>
-                                                                </Box>
-                                                            );
-                                                        }
-                                                        return (
-                                                            <Box
-                                                                key={insightIndex}
-                                                                p={4}
-                                                                borderWidth="1px"
-                                                                borderRadius="md"
-                                                                _hover={{ bg: 'gray.50' }}
-                                                                transition="all 0.2s"
-                                                                minW="400px"
-                                                                maxW="400px"
-                                                                height="500px"
-                                                                display="flex"
-                                                                flexDirection="column"
-                                                            >
-                                                                <VStack align="start" spacing={3} w="100%" height="100%">
-                                                                    {/* Title and Tags Group */}
-                                                                    <VStack align="start" spacing={1} w="100%">
-                                                                        <Text
-                                                                            fontWeight="semibold"
-                                                                            fontSize="md"
-                                                                            color="gray.700"
-                                                                        >
-                                                                            {insight.title}
-                                                                        </Text>
-
-                                                                        <HStack spacing={2} wrap="wrap" w="100%">
-                                                                            {insight.frequency && (
-                                                                                <Badge
-                                                                                    colorScheme={
-                                                                                        insight.frequency.toLowerCase() === 'high' ? 'green' :
-                                                                                            insight.frequency.toLowerCase() === 'medium' ? 'yellow' :
-                                                                                                'red'
-                                                                                    }
-                                                                                    fontSize="xs"
-                                                                                    whiteSpace="normal"
-                                                                                    wordBreak="break-word"
-                                                                                >
-                                                                                    {insight.frequency}
-                                                                                </Badge>
-                                                                            )}
-                                                                            <Badge
-                                                                                colorScheme="purple"
-                                                                                fontSize="xs"
-                                                                                whiteSpace="normal"
-                                                                                wordBreak="break-word"
-                                                                            >
-                                                                                QUERY: {insight.query}
-                                                                            </Badge>
-                                                                        </HStack>
-                                                                    </VStack>
-
-                                                                    {insight.evidence && (
-                                                                        <Box
-                                                                            p={3}
-                                                                            bg="gray.50"
-                                                                            borderRadius="md"
-                                                                            w="100%"
-                                                                            fontSize="sm"
-                                                                        >
-                                                                            <Text fontStyle="italic" color="gray.700">
-                                                                                "{insight.evidence}"
-                                                                            </Text>
-                                                                        </Box>
-                                                                    )}
-
-                                                                    <VStack align="start" spacing={2} w="100%" flex="1">
-                                                                        {insight.engagement_metrics && (
-                                                                            <Text fontSize="sm" color="gray.600">
-                                                                                <strong>Engagement:</strong> {insight.engagement_metrics}
-                                                                            </Text>
-                                                                        )}
-                                                                        {insight.correlation && (
-                                                                            <Text fontSize="sm" color="gray.600">
-                                                                                <strong>Correlation:</strong> {insight.correlation}
-                                                                            </Text>
-                                                                        )}
-                                                                        {insight.significance && (
-                                                                            <Text fontSize="sm" color="gray.600">
-                                                                                <strong>Significance:</strong> {insight.significance}
-                                                                            </Text>
-                                                                        )}
-                                                                    </VStack>
-                                                                </VStack>
-                                                            </Box>
-                                                        );
-                                                    })}
-                                                </HStack>
-                                            </Box>
-                                        )}
-                                    </VStack>
-                                </Box>
-                            ))}
-                        </VStack>
-
-                        {/* Avatar Insights */}
+                {/* General Insights */}
+                <VStack spacing={6} w="full">
+                    {insights.map((section, index) => (
                         <Box
-                            borderWidth="1px"
-                            borderRadius="lg"
-                            p={4}
-                            bg="white"
-                            boxShadow="sm"
-                            position="relative"
+                            key={section.title}
                             w="full"
+                            bg="white"
+                            borderRadius="lg"
+                            boxShadow="sm"
+                            overflow="hidden"
                         >
-                            <VStack align="stretch" spacing={4} w="full">
-                                <HStack
-                                    bg="gray.50"
-                                    p={3}
-                                    borderRadius="md"
-                                    position="sticky"
-                                    top="0"
-                                    zIndex="1"
-                                >
+                            {/* Section Header */}
+                            <Box
+                                p={4}
+                                bg="gray.50"
+                                borderBottom="1px"
+                                borderColor="gray.200"
+                            >
+                                <HStack spacing={3}>
                                     <Icon
-                                        as={FaUserCircle}
+                                        as={iconMap[section.icon] || FaLightbulb}
                                         color="purple.500"
                                         boxSize={5}
                                     />
-                                    <Heading size="md">Avatar Insights</Heading>
-                                    <Badge
-                                        colorScheme="purple"
-                                        ml="auto"
-                                        fontSize="sm"
-                                        px={2}
-                                    >
-                                        {avatars.length} avatars
-                                    </Badge>
+                                    <Text fontWeight="semibold" fontSize="lg">
+                                        {section.title}
+                                    </Text>
                                 </HStack>
+                            </Box>
 
-                                {isLoading ? (
+                            {/* Section Content */}
+                            <Box p={4}>
+                                {loading ? (
                                     <Box p={4}>
                                         <HStack spacing={4}>
                                             <Spinner size="sm" color="purple.500" />
-                                            <Text color="gray.600">Loading avatars...</Text>
+                                            <Text color="gray.600">Loading insights...</Text>
                                         </HStack>
                                     </Box>
-                                ) : avatars.length === 0 ? (
+                                ) : section.insights?.length === 0 ? (
                                     <Box p={8} textAlign="center">
                                         <VStack spacing={3}>
                                             <Icon
-                                                as={FaUserCircle}
+                                                as={iconMap[section.icon] || FaLightbulb}
                                                 color="gray.300"
                                                 boxSize={8}
                                             />
                                             <Text color="gray.500" fontWeight="medium">
-                                                No avatars available yet
+                                                No insights available yet
                                             </Text>
                                             <Text color="gray.400" fontSize="sm">
-                                                Generate insights to discover user personas and their characteristics
+                                                {section.title === "Pain & Frustration Analysis" && "Discover user pain points and frustrations"}
+                                                {section.title === "Failed Solutions Analysis" && "Learn about attempted solutions that didn't work"}
+                                                {section.title === "Question & Advice Mapping" && "Find common questions and expert advice"}
+                                                {section.title === "Pattern Detection" && "Uncover trends and recurring themes"}
+                                                {section.title === "Popular Products Analysis" && "Explore product preferences and market gaps"}
                                             </Text>
                                         </VStack>
                                     </Box>
                                 ) : (
-                                    <Box overflowX="auto" w="full">
-                                        <HStack spacing={4} pb={2}>
-                                            {avatars.map((avatar) => (
+                                    <Box overflowX="auto" pb={4} mx="-4" px={4}>
+                                        <HStack spacing={4} minW="max-content" py={4}>
+                                            {section.insights?.map((insight, insightIndex) => (
                                                 <Box
-                                                    key={avatar.name}
-                                                    p={4}
+                                                    key={insightIndex}
                                                     borderWidth="1px"
                                                     borderRadius="md"
                                                     _hover={{ bg: 'gray.50' }}
                                                     transition="all 0.2s"
-                                                    minW="400px"
-                                                    maxW="400px"
-                                                    display="flex"
-                                                    flexDirection="column"
+                                                    minW="350px"
+                                                    maxW="350px"
+                                                    position="relative"
                                                 >
-                                                    <VStack align="start" spacing={3} w="100%" height="100%">
-                                                        {/* Title and Type */}
-                                                        <VStack align="start" spacing={1} w="100%">
+                                                    <Box px={4} py={3}>
+                                                        <VStack align="start" spacing={3} w="full">
                                                             <Text
                                                                 fontWeight="semibold"
                                                                 fontSize="md"
                                                                 color="gray.700"
                                                             >
-                                                                {avatar.name}
+                                                                {insight.title}
                                                             </Text>
-                                                            <Badge colorScheme="purple" fontSize="xs">
-                                                                {avatar.type}
-                                                            </Badge>
-                                                        </VStack>
 
-                                                        {/* Avatar Insights */}
-                                                        {avatar.insights?.map((insight, index) => (
-                                                            <Box key={index} w="100%">
-                                                                <Text fontSize="sm" color="gray.600">
-                                                                    {insight.description}
+                                                            {/* Frequency Badge */}
+                                                            {insight.frequency && (
+                                                                <Box w="full">
+                                                                    <Badge
+                                                                        display="block"
+                                                                        w="full"
+                                                                        bg="red.100"
+                                                                        color="red.800"
+                                                                        fontSize="2xs"
+                                                                        px={2}
+                                                                        py={0.5}
+                                                                        borderRadius="none"
+                                                                        whiteSpace="pre-wrap"
+                                                                        ml={-2}
+                                                                    >
+                                                                        {insight.frequency.toUpperCase()} FREQUENCY IN DISCUSSIONS
+                                                                    </Badge>
+                                                                </Box>
+                                                            )}
+
+                                                            {/* Query Badge */}
+                                                            {insight.query && (
+                                                                <Box w="full">
+                                                                    <Badge
+                                                                        display="block"
+                                                                        w="full"
+                                                                        bg="purple.100"
+                                                                        color="purple.800"
+                                                                        fontSize="2xs"
+                                                                        px={2}
+                                                                        py={0.5}
+                                                                        borderRadius="none"
+                                                                        whiteSpace="pre-wrap"
+                                                                        ml={-2}
+                                                                    >
+                                                                        QUERY: {insight.query.toUpperCase()}
+                                                                    </Badge>
+                                                                </Box>
+                                                            )}
+
+                                                            {insight.evidence && (
+                                                                <Box
+                                                                    p={3}
+                                                                    bg="gray.50"
+                                                                    borderRadius="md"
+                                                                    w="full"
+                                                                    fontSize="sm"
+                                                                >
+                                                                    <Text fontStyle="italic" color="gray.700">
+                                                                        "{insight.evidence}"
+                                                                    </Text>
+                                                                </Box>
+                                                            )}
+
+                                                            {insight.engagement_metrics && (
+                                                                <Text fontSize="sm" color="gray.600" w="full">
+                                                                    <strong>Engagement:</strong> {insight.engagement_metrics}
                                                                 </Text>
+                                                            )}
 
-                                                                <VStack align="start" spacing={3} mt={3}>
-                                                                    <Box w="100%">
-                                                                        <Text fontSize="sm" color="green.600" fontWeight="medium">
-                                                                            Needs:
+                                                            {insight.correlation && (
+                                                                <Text fontSize="sm" color="gray.600" w="full">
+                                                                    <strong>Correlation:</strong> {insight.correlation}
+                                                                </Text>
+                                                            )}
+
+                                                            {insight.significance && (
+                                                                <Text fontSize="sm" color="gray.600" w="full">
+                                                                    <strong>Significance:</strong> {insight.significance}
+                                                                </Text>
+                                                            )}
+
+                                                            {/* Product-specific fields */}
+                                                            {insight.platform && (
+                                                                <Box w="full">
+                                                                    <Text fontSize="sm" color="gray.600">
+                                                                        <strong>Platform:</strong> {insight.platform}
+                                                                    </Text>
+                                                                    {insight.price_range && (
+                                                                        <Text fontSize="sm" color="gray.600">
+                                                                            <strong>Price Range:</strong> {insight.price_range}
                                                                         </Text>
-                                                                        <UnorderedList pl={4} fontSize="sm">
-                                                                            {insight.needs.map((need, i) => (
-                                                                                <ListItem key={i}>{need}</ListItem>
-                                                                            ))}
-                                                                        </UnorderedList>
-                                                                    </Box>
-                                                                    <Box w="100%">
-                                                                        <Text fontSize="sm" color="red.600" fontWeight="medium">
-                                                                            Pain Points:
-                                                                        </Text>
-                                                                        <UnorderedList pl={4} fontSize="sm">
-                                                                            {insight.pain_points.map((point, i) => (
-                                                                                <ListItem key={i}>{point}</ListItem>
-                                                                            ))}
-                                                                        </UnorderedList>
-                                                                    </Box>
-                                                                    <Box w="100%">
-                                                                        <Text fontSize="sm" color="purple.600" fontWeight="medium">
-                                                                            Behaviors:
-                                                                        </Text>
-                                                                        <UnorderedList pl={4} fontSize="sm">
-                                                                            {insight.behaviors.map((behavior, i) => (
-                                                                                <ListItem key={i}>{behavior}</ListItem>
-                                                                            ))}
-                                                                        </UnorderedList>
-                                                                    </Box>
-                                                                </VStack>
-                                                            </Box>
-                                                        ))}
-                                                    </VStack>
+                                                                    )}
+                                                                </Box>
+                                                            )}
+
+                                                            {insight.positive_feedback && (
+                                                                <Box w="full">
+                                                                    <Text color="green.600" fontWeight="semibold">
+                                                                        Positive Feedback:
+                                                                    </Text>
+                                                                    <UnorderedList pl={4} mt={1}>
+                                                                        {insight.positive_feedback?.map((point, idx) => (
+                                                                            <ListItem key={idx}>{point}</ListItem>
+                                                                        ))}
+                                                                    </UnorderedList>
+                                                                </Box>
+                                                            )}
+
+                                                            {insight.negative_feedback && (
+                                                                <Box w="full">
+                                                                    <Text color="red.600" fontWeight="semibold">
+                                                                        Negative Feedback:
+                                                                    </Text>
+                                                                    <UnorderedList pl={4} mt={1}>
+                                                                        {insight.negative_feedback?.map((point, idx) => (
+                                                                            <ListItem key={idx}>{point}</ListItem>
+                                                                        ))}
+                                                                    </UnorderedList>
+                                                                </Box>
+                                                            )}
+
+                                                            {insight.market_gap && (
+                                                                <Box w="full">
+                                                                    <Text color="blue.600" fontWeight="semibold">
+                                                                        Market Gap:
+                                                                    </Text>
+                                                                    <Text mt={1}>{insight.market_gap}</Text>
+                                                                </Box>
+                                                            )}
+                                                        </VStack>
+                                                    </Box>
                                                 </Box>
                                             ))}
                                         </HStack>
                                     </Box>
                                 )}
-                            </VStack>
-                        </Box>
-
-                        {/* Debug box for raw response */}
-                        {perplexityResponse && (
-                            <Box mt={6} p={4} bg="gray.50" borderRadius="md">
-                                <Text fontSize="lg" fontWeight="bold" mb={2}>
-                                    Debug: Raw Response
-                                </Text>
-                                <Text whiteSpace="pre-wrap" fontSize="sm">
-                                    {JSON.stringify(perplexityResponse, null, 2)}
-                                </Text>
                             </Box>
-                        )}
-                    </VStack>
-                </Box>
+                        </Box>
+                    ))}
+                </VStack>
 
-                <Modal isOpen={isOpen} onClose={onClose} size="xl">
-                    <ModalOverlay />
-                    <ModalContent>
-                        <ModalHeader>
-                            <Heading size="lg">Generate Insights</Heading>
-                            <Text color="gray.600" fontSize="md" mt={1}>
-                                Select avatars to generate targeted insights
+                {/* Avatars Section */}
+                <Box w="full">
+                    <Box
+                        p={4}
+                        bg="gray.50"
+                        borderBottom="1px"
+                        borderColor="gray.200"
+                        borderTopRadius="lg"
+                    >
+                        <HStack spacing={3}>
+                            <Icon
+                                as={FaUserCircle}
+                                color="purple.500"
+                                boxSize={5}
+                            />
+                            <Text fontWeight="semibold" fontSize="lg">
+                                User Avatars
                             </Text>
-                        </ModalHeader>
-                        <ModalCloseButton />
-                        <ModalBody pb={6}>
-                            <VStack spacing={6} align="stretch">
-                                <Card variant="outline">
-                                    <CardBody>
-                                        <VStack spacing={4} align="stretch">
-                                            <Heading size="md">Choose Your Research Focus</Heading>
+                        </HStack>
+                    </Box>
 
-                                            <ResearchFocusOption
-                                                title="General Insights"
-                                                description="Broad analysis without specific persona focus"
-                                                isSelected={!selectedPersona}
-                                                onClick={() => setSelectedPersona(null)}
-                                            />
-
-                                            <Box borderWidth="1px" borderStyle="dashed" borderRadius="md" p={4}>
-                                                <VStack spacing={4} align="stretch">
-                                                    <Text fontWeight="medium" color="gray.600">Persona-Based Research</Text>
-
-                                                    <ResearchFocusOption
-                                                        title="Active Senior with Chronic Pain"
-                                                        description="Former hiker dealing with joint issues"
-                                                        isSelected={selectedPersona === 'senior'}
-                                                        onClick={() => setSelectedPersona('senior')}
-                                                    />
-
-                                                    <ResearchFocusOption
-                                                        title="Young Professional with Sports Injury"
-                                                        description="Recovering athlete seeking treatment"
-                                                        isSelected={selectedPersona === 'athlete'}
-                                                        onClick={() => setSelectedPersona('athlete')}
-                                                    />
+                    <Box p={4} bg="white" borderBottomRadius="lg" boxShadow="sm">
+                        {loading ? (
+                            <Box p={4}>
+                                <HStack spacing={4}>
+                                    <Spinner size="sm" color="purple.500" />
+                                    <Text color="gray.600">Loading avatars...</Text>
+                                </HStack>
+                            </Box>
+                        ) : avatars.length === 0 ? (
+                            <Box p={8} textAlign="center">
+                                <VStack spacing={3}>
+                                    <Icon
+                                        as={FaUserCircle}
+                                        color="gray.300"
+                                        boxSize={8}
+                                    />
+                                    <Text color="gray.500" fontWeight="medium">
+                                        No avatars available yet
+                                    </Text>
+                                    <Text color="gray.400" fontSize="sm">
+                                        Generate insights to discover user personas and their characteristics
+                                    </Text>
+                                </VStack>
+                            </Box>
+                        ) : (
+                            <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} spacing={6}>
+                                {avatars.map((avatar, index) => (
+                                    <Box
+                                        key={index}
+                                        p={6}
+                                        bg="white"
+                                        borderRadius="lg"
+                                        boxShadow="sm"
+                                        borderWidth="1px"
+                                    >
+                                        <VStack align="start" spacing={4}>
+                                            <HStack spacing={3}>
+                                                <Icon as={FaUser} color="purple.500" boxSize={5} />
+                                                <VStack align="start" spacing={0}>
+                                                    <Text fontWeight="semibold" fontSize="lg">
+                                                        {avatar.name}
+                                                    </Text>
+                                                    <Text color="gray.600" fontSize="sm">
+                                                        {avatar.type}
+                                                    </Text>
                                                 </VStack>
-                                            </Box>
+                                            </HStack>
+
+                                            {avatar.insights?.map((insight, insightIndex) => (
+                                                <Box key={insightIndex} w="100%">
+                                                    <Badge
+                                                        display="block"
+                                                        w="full"
+                                                        bg="purple.100"
+                                                        color="purple.800"
+                                                        fontSize="2xs"
+                                                        px={2}
+                                                        py={2}
+                                                        borderRadius="none"
+                                                        whiteSpace="pre-wrap"
+                                                        ml={-2}
+                                                        mb={4}
+                                                    >
+                                                        QUERY: {insight.query.toUpperCase()}
+                                                    </Badge>
+                                                    <Text fontSize="sm" color="gray.600" fontWeight="medium">
+                                                        {insight.title}:
+                                                    </Text>
+
+                                                    <Text fontSize="sm" mt={1} color="gray.700">
+                                                        {insight.description}
+                                                    </Text>
+
+                                                    <Box mt={2}>
+                                                        <Text fontSize="sm" color="gray.500" fontStyle="italic">
+                                                            {insight.evidence}
+                                                        </Text>
+                                                    </Box>
+
+                                                    <Box w="100%" mt={3}>
+                                                        <Text fontSize="sm" color="blue.600" fontWeight="medium">
+                                                            Needs:
+                                                        </Text>
+                                                        <UnorderedList pl={4} fontSize="sm">
+                                                            {insight.needs.map((need, i) => (
+                                                                <ListItem key={i}>{need}</ListItem>
+                                                            ))}
+                                                        </UnorderedList>
+                                                    </Box>
+
+                                                    <Box w="100%" mt={2}>
+                                                        <Text fontSize="sm" color="red.600" fontWeight="medium">
+                                                            Pain Points:
+                                                        </Text>
+                                                        <UnorderedList pl={4} fontSize="sm">
+                                                            {insight.pain_points.map((point, i) => (
+                                                                <ListItem key={i}>{point}</ListItem>
+                                                            ))}
+                                                        </UnorderedList>
+                                                    </Box>
+
+                                                    <Box w="100%" mt={2}>
+                                                        <Text fontSize="sm" color="purple.600" fontWeight="medium">
+                                                            Behaviors:
+                                                        </Text>
+                                                        <UnorderedList pl={4} fontSize="sm">
+                                                            {insight.behaviors.map((behavior, i) => (
+                                                                <ListItem key={i}>{behavior}</ListItem>
+                                                            ))}
+                                                        </UnorderedList>
+                                                    </Box>
+                                                </Box>
+                                            ))}
                                         </VStack>
-                                    </CardBody>
-                                </Card>
-
-                                <Card variant="outline">
-                                    <CardBody>
-                                        <VStack spacing={4} align="stretch">
-                                            <Heading size="md">Enter Your Query</Heading>
-
-                                            <InputGroup>
-                                                <Textarea
-                                                    value={topicKeyword}
-                                                    onChange={(e) => setTopicKeyword(e.target.value)}
-                                                    placeholder="Type your query here (e.g., 'joint pain management')"
-                                                    resize="vertical"
-                                                    minH="60px"
-                                                    rows={2}
-                                                />
-                                            </InputGroup>
-
-                                            <Button
-                                                leftIcon={<Icon as={FaMagic} />}
-                                                variant="outline"
-                                                colorScheme="purple"
-                                                width="100%"
-                                                onClick={handleGenerateWithAI}
-                                                isLoading={isLoading}
-                                            >
-                                                Generate with AI
-                                            </Button>
-                                        </VStack>
-                                    </CardBody>
-                                </Card>
-                            </VStack>
-                        </ModalBody>
-
-                        <ModalFooter>
-                            <Button
-                                colorScheme="purple"
-                                width="100%"
-                                onClick={handleGenerateInsights}
-                                isDisabled={!topicKeyword.trim()}
-                            >
-                                Generate Insights
-                            </Button>
-                        </ModalFooter>
-                    </ModalContent>
-                </Modal>
+                                    </Box>
+                                ))}
+                            </SimpleGrid>
+                        )}
+                    </Box>
+                </Box>
 
                 {/* Debug Box */}
                 <Box
@@ -1603,6 +1364,99 @@ export default function CommunityInsights() {
                     </Accordion>
                 </Box>
             </VStack>
-        </Container>
+
+            {/* Generate Insights Modal */}
+            <Modal isOpen={isOpen} onClose={onClose} size="xl">
+                <ModalOverlay />
+                <ModalContent>
+                    <ModalHeader>
+                        <Heading size="lg">Generate Insights</Heading>
+                        <Text color="gray.600" fontSize="md" mt={1}>
+                            Select avatars to generate targeted insights
+                        </Text>
+                    </ModalHeader>
+                    <ModalCloseButton />
+                    <ModalBody pb={6}>
+                        <VStack spacing={6} align="stretch">
+                            <Card variant="outline">
+                                <CardBody>
+                                    <VStack spacing={4} align="stretch">
+                                        <Heading size="md">Choose Your Research Focus</Heading>
+
+                                        <ResearchFocusOption
+                                            title="General Insights"
+                                            description="Broad analysis without specific persona focus"
+                                            isSelected={!selectedPersona}
+                                            onClick={() => setSelectedPersona(null)}
+                                        />
+
+                                        <Box borderWidth="1px" borderStyle="dashed" borderRadius="md" p={4}>
+                                            <VStack spacing={4} align="stretch">
+                                                <Text fontWeight="medium" color="gray.600">Persona-Based Research</Text>
+
+                                                <ResearchFocusOption
+                                                    title="Active Senior with Chronic Pain"
+                                                    description="Former hiker dealing with joint issues"
+                                                    isSelected={selectedPersona === 'senior'}
+                                                    onClick={() => setSelectedPersona('senior')}
+                                                />
+
+                                                <ResearchFocusOption
+                                                    title="Young Professional with Sports Injury"
+                                                    description="Recovering athlete seeking treatment"
+                                                    isSelected={selectedPersona === 'athlete'}
+                                                    onClick={() => setSelectedPersona('athlete')}
+                                                />
+                                            </VStack>
+                                        </Box>
+                                    </VStack>
+                                </CardBody>
+                            </Card>
+
+                            <Card variant="outline">
+                                <CardBody>
+                                    <VStack spacing={4} align="stretch">
+                                        <Heading size="md">Enter Your Query</Heading>
+
+                                        <InputGroup>
+                                            <Textarea
+                                                value={userQuery}
+                                                onChange={(e) => setUserQuery(e.target.value)}
+                                                placeholder="Type your query here (e.g., 'joint pain management')"
+                                                resize="vertical"
+                                                minH="60px"
+                                                rows={2}
+                                            />
+                                        </InputGroup>
+
+                                        <Button
+                                            leftIcon={<Icon as={FaMagic} />}
+                                            variant="outline"
+                                            colorScheme="purple"
+                                            width="100%"
+                                            onClick={handleGenerateWithAI}
+                                            isLoading={loading}
+                                        >
+                                            Generate with AI
+                                        </Button>
+                                    </VStack>
+                                </CardBody>
+                            </Card>
+                        </VStack>
+                    </ModalBody>
+
+                    <ModalFooter>
+                        <Button
+                            colorScheme="purple"
+                            width="100%"
+                            onClick={handleGenerateInsights}
+                            isDisabled={!userQuery.trim()}
+                        >
+                            Generate Insights
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
+        </Box>
     );
 } 
