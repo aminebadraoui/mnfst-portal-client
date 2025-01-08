@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import {
     Box,
     VStack,
@@ -28,13 +28,17 @@ import {
     FaPencilAlt,
     FaComments,
     FaChartLine,
+    FaExclamationCircle,
+    FaQuestionCircle,
+    FaShoppingCart,
+    FaUserCircle,
 } from 'react-icons/fa';
 import { useAuthStore } from '../store/authStore';
 import ProjectsModal from './ProjectsModal';
 import useProjectStore from '../store/projectStore';
 import ThemeToggle from './ThemeToggle';
 
-const NavItem = ({ icon, children, to, onClick, indent = false, isHeader = false, rightElement, isActive = false, isExpanded = false, onToggle, isFeature = false }) => {
+const NavItem = ({ icon, children, to, onClick, indent = false, isHeader = false, rightElement, isActive = false, isExpanded = false, onToggle, isFeature = false, px }) => {
     const location = useLocation();
     const isCurrentPath = to && location.pathname.startsWith(to);
     const featureColor = useColorModeValue('gray.600', 'gray.400');
@@ -44,8 +48,8 @@ const NavItem = ({ icon, children, to, onClick, indent = false, isHeader = false
             as={to ? RouterLink : 'div'}
             to={to}
             align="center"
-            px={isFeature ? "8" : indent ? "6" : "4"}
-            py={isFeature ? "1.5" : "2"}
+            px={px || "4"}
+            py={indent ? "1" : "2"}
             cursor="pointer"
             color={isActive || isCurrentPath
                 ? "accent.emphasized"
@@ -61,7 +65,7 @@ const NavItem = ({ icon, children, to, onClick, indent = false, isHeader = false
             }}
             onClick={onClick}
             role="group"
-            borderLeft={isFeature ? "1px" : "0"}
+            borderLeft={indent ? "1px" : "0"}
             borderLeftColor={isActive || isCurrentPath ? "accent.default" : "transparent"}
             fontSize={isFeature ? "sm" : "md"}
             fontWeight={isHeader ? "semibold" : isFeature ? "normal" : "medium"}
@@ -77,41 +81,86 @@ const NavItem = ({ icon, children, to, onClick, indent = false, isHeader = false
             {rightElement && (
                 <Box ml="2">{rightElement}</Box>
             )}
-            {onToggle && (
-                <Icon
-                    as={isExpanded ? FaChevronDown : FaChevronRight}
-                    ml="2"
-                    fontSize="12"
-                    transition="all 0.2s"
-                    color="inherit"
-                />
-            )}
         </Flex>
     );
 };
 
 const ProjectFeatures = ({ projectId }) => {
     const location = useLocation();
+    const navigate = useNavigate();
+    const [isResearchOpen, setIsResearchOpen] = useState(false);
+
+    const researchSubItems = [
+        { name: 'Pain & Frustration Analysis', path: 'pain-analysis', icon: FaExclamationCircle },
+        { name: 'Question & Advice Mapping', path: 'question-advice', icon: FaQuestionCircle },
+        { name: 'Pattern Detection', path: 'pattern-detection', icon: FaChartLine },
+        { name: 'Popular Products Analysis', path: 'product-analysis', icon: FaShoppingCart },
+        { name: 'User Avatars', path: 'avatars', icon: FaUserCircle },
+    ];
+
     const features = [
-        { name: 'Research Hub', icon: FaSearch, path: 'research', color: 'blue' },
+        {
+            name: 'Research Hub',
+            icon: FaSearch,
+            path: 'research',
+            color: 'blue',
+            subItems: researchSubItems
+        },
         { name: 'Content Hub', icon: FaPencilAlt, path: 'content', color: 'green' },
         { name: 'Communication Hub', icon: FaComments, path: 'communication', color: 'purple' },
         { name: 'Strategy Hub', icon: FaChartLine, path: 'strategy', color: 'orange' },
     ];
 
+    // Auto-open research submenu when in research routes, close otherwise
+    useEffect(() => {
+        const researchBasePath = `/projects/${projectId}/research`;
+        const isInResearch = location.pathname.startsWith(researchBasePath);
+        setIsResearchOpen(isInResearch);
+    }, [location.pathname, projectId]);
+
     return (
-        <VStack spacing={0.5} align="stretch" mt={0.5} mb={1}>
-            {features.map((feature) => (
-                <NavItem
-                    key={feature.path}
-                    icon={feature.icon}
-                    to={`/projects/${projectId}/${feature.path}`}
-                    isActive={location.pathname.includes(feature.path)}
-                    isFeature={true}
-                >
-                    {feature.name}
-                </NavItem>
-            ))}
+        <VStack align="stretch" spacing={0}>
+            {features.map((feature) => {
+                const basePath = `/projects/${projectId}/${feature.path}`;
+                const isActive = location.pathname.startsWith(basePath);
+                const isResearchHub = feature.path === 'research';
+
+                return (
+                    <Box key={feature.name}>
+                        <NavItem
+                            icon={feature.icon}
+                            to={basePath}
+                            isActive={isActive}
+                            isFeature={true}
+                            indent={true}
+                            px="6"
+                            onClick={isResearchHub ? (e) => {
+                                e.preventDefault();
+                                setIsResearchOpen(!isResearchOpen);
+                                navigate(basePath);
+                            } : undefined}
+                        >
+                            {feature.name}
+                        </NavItem>
+                        {isResearchHub && isResearchOpen && (
+                            <VStack align="stretch" spacing={0} mb={4}>
+                                {researchSubItems.map((subItem, idx) => (
+                                    <NavItem
+                                        key={subItem.name}
+                                        icon={subItem.icon}
+                                        to={`${basePath}/${subItem.path}`}
+                                        isFeature={true}
+                                        indent={true}
+                                        px="10"
+                                    >
+                                        {subItem.name}
+                                    </NavItem>
+                                ))}
+                            </VStack>
+                        )}
+                    </Box>
+                );
+            })}
         </VStack>
     );
 };
@@ -209,7 +258,6 @@ const Sidebar = () => {
                             <NavItem
                                 icon={FaFolder}
                                 to={`/projects/${project.id}`}
-                                indent={true}
                                 isActive={expandedProject === project.id}
                                 onToggle={() => handleProjectClick(project.id)}
                                 isExpanded={expandedProject === project.id}

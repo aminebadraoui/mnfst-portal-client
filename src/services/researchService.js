@@ -1,63 +1,48 @@
 import api from './api';
 
-export const createResearch = async (data) => {
-    const response = await api.post('/community-insights', data);
+export const startAnalysis = async (projectId, query, analysisType, userId) => {
+    if (!userId) {
+        throw new Error('User ID is required');
+    }
+
+    const response = await api.post(`/research-hub/${analysisType}/analyze`, {
+        project_id: projectId,
+        user_id: userId,
+        user_query: query,
+        topic_keyword: query,
+        source_urls: [],
+        product_urls: [],
+        use_only_specified_sources: false
+    });
     return response.data;
 };
 
-export const getResearch = async (id) => {
-    const response = await api.get(`/community-insights/${id}`);
+export const getAnalysisResults = async (analysisType, taskId) => {
+    const response = await api.get(`/research-hub/${analysisType}/results/${taskId}`);
     return response.data;
 };
 
-export const listResearch = async () => {
-    const response = await api.get('/community-insights');
+export const getProjectAnalyses = async (analysisType, projectId) => {
+    const response = await api.get(`/research-hub/${analysisType}/project/${projectId}`);
     return response.data;
 };
 
-export const updateResearchUrls = async (id, urls) => {
-    const response = await api.put(`/community-insights/${id}/urls`, urls);
+export const getAnalysisTypes = async () => {
+    const response = await api.get('/research-hub/analysis-types');
     return response.data;
 };
 
-export const saveCommunityAnalysis = async (id, insights) => {
-    const response = await api.post(`/community-insights/${id}/community-analysis`, insights);
+export const getProjectQueries = async (projectId) => {
+    const response = await api.get(`/research-hub/project/${projectId}/queries`);
     return response.data;
 };
 
-export const saveMarketAnalysis = async (id, opportunities) => {
-    const response = await api.post(`/community-insights/${id}/market-analysis`, opportunities);
+export const listResearch = async (projectId) => {
+    const response = await api.get(`/research-hub/project/${projectId}`);
     return response.data;
 };
 
 export const deleteResearch = async (researchId) => {
-    try {
-        const response = await api.delete(`/community-insights/${researchId}`);
-        return response.data;
-    } catch (error) {
-        throw new Error(error.response?.data?.detail || 'Failed to delete research');
-    }
-};
-
-export const startAnalysis = async (researchId, urls) => {
-    const response = await api.post('/community-analysis/analyze-insights', {
-        research_id: researchId,
-        urls: urls
-    });
-    return response.data;
-};
-
-export const startMarketAnalysis = async (researchId, insights, quotes, keywords_found) => {
-    const response = await api.post('/community-analysis/analyze-trends', {
-        research_id: researchId,
-        insights,
-        quotes,
-        keywords_found
-    });
-    return response.data;
-};
-
-export const checkTaskStatus = async (taskId) => {
-    const response = await api.get(`/community-analysis/task/${taskId}`);
+    const response = await api.delete(`/research-hub/${researchId}`);
     return response.data;
 }; 

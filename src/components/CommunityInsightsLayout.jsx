@@ -8,6 +8,8 @@ import {
     Button,
     useColorModeValue,
     Divider,
+    Heading,
+    HStack,
 } from '@chakra-ui/react';
 import {
     FaChevronLeft,
@@ -17,7 +19,12 @@ import {
     FaFileAlt,
     FaBullseye,
     FaCheckCircle,
-    FaSignOutAlt
+    FaSignOutAlt,
+    FaExclamationCircle,
+    FaQuestionCircle,
+    FaShoppingBag,
+    FaChartLine,
+    FaUserCircle,
 } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 

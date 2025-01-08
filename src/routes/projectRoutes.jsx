@@ -7,7 +7,11 @@ import CommunicationHub from '../pages/hubs/CommunicationHub';
 import StrategyHub from '../pages/hubs/StrategyHub';
 
 // Research Hub Components
-import CommunityInsights from '../pages/hubs/research/CommunityInsights';
+import PainAnalysisDetail from '../pages/hubs/research/PainAnalysisDetail';
+import QuestionAdviceDetail from '../pages/hubs/research/QuestionAdviceDetail';
+import PatternDetectionDetail from '../pages/hubs/research/PatternDetectionDetail';
+import ProductAnalysisDetail from '../pages/hubs/research/ProductAnalysisDetail';
+import AvatarsDetail from '../pages/hubs/research/AvatarsDetail';
 
 // Content Hub Components
 import Avatars from '../pages/hubs/content/Avatars';
@@ -46,7 +50,11 @@ const ProjectRoutes = () => {
             {/* Research Hub Routes */}
             <Route path="research">
                 <Route index element={<ResearchHub />} />
-                <Route path="community-insights" element={<CommunityInsights />} />
+                <Route path="pain-analysis" element={<PainAnalysisDetail />} />
+                <Route path="question-advice" element={<QuestionAdviceDetail />} />
+                <Route path="pattern-detection" element={<PatternDetectionDetail />} />
+                <Route path="product-analysis" element={<ProductAnalysisDetail />} />
+                <Route path="avatars" element={<AvatarsDetail />} />
             </Route>
 
             {/* Content Hub Routes */}
