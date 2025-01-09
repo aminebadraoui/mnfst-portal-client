@@ -60,7 +60,7 @@ const Chat = ({ projectId }) => {
                 <CardBody>
                     <VStack spacing={8} align="center" p={4}>
                         <Heading size="lg" textAlign="center">
-                            What do you want to know?
+                            What can I help you with?
                         </Heading>
                         <HStack spacing={2} w="full">
                             <Input
