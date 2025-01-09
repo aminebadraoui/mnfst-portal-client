@@ -16,6 +16,7 @@ import AvatarsDetail from '../pages/hubs/research/AvatarsDetail';
 // Content Hub Components
 import Avatars from '../pages/hubs/content/Avatars';
 import AdScripts from '../pages/hubs/content/AdScripts';
+import CreateAdvertorials from '../pages/hubs/content/CreateAdvertorials';
 
 // Communication Hub Components
 import Chatbots from '../pages/hubs/communication/Chatbots';
@@ -62,6 +63,7 @@ const ProjectRoutes = () => {
                 <Route index element={<ContentHub />} />
                 <Route path="avatars" element={<Avatars />} />
                 <Route path="ad-script-studio" element={<AdScripts />} />
+                <Route path="ad-script-studio/create" element={<CreateAdvertorials />} />
                 <Route path="social-media-studio" element={<SocialMediaStudio />} />
                 <Route path="email-studio" element={<EmailStudio />} />
             </Route>
