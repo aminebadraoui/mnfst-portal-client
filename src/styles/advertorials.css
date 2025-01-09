@@ -1,0 +1,123 @@
+.markdown-content {
+    max-width: 800px;
+    margin: 0 auto;
+    font-family: 'Arial', sans-serif;
+    line-height: 1.6;
+    color: var(--chakra-colors-chakra-body-text);
+}
+
+.markdown-content h1 {
+    font-size: 2.5rem;
+    color: var(--chakra-colors-purple-600);
+    margin-bottom: 1.5rem;
+    text-align: center;
+    font-weight: bold;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--chakra-colors-purple-200);
+}
+
+[data-theme="dark"] .markdown-content h1 {
+    color: var(--chakra-colors-purple-200);
+    border-bottom-color: var(--chakra-colors-purple-600);
+}
+
+.markdown-content h2 {
+    font-size: 1.8rem;
+    color: var(--chakra-colors-purple-600);
+    margin-top: 2.5rem;
+    margin-bottom: 1rem;
+    font-weight: bold;
+}
+
+[data-theme="dark"] .markdown-content h2 {
+    color: var(--chakra-colors-purple-200);
+}
+
+.markdown-content p {
+    margin-bottom: 1.5rem;
+    font-size: 1.1rem;
+    color: var(--chakra-colors-chakra-body-text);
+}
+
+/* Highlight boxes for important sections */
+.markdown-content h1:nth-of-type(7), /* First Call to Action */
+.markdown-content h1:nth-of-type(12) /* Final Call to Action */ {
+    background-color: var(--chakra-colors-purple-50);
+    color: var(--chakra-colors-purple-800);
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--chakra-colors-purple-100);
+    margin: 2rem 0;
+}
+
+[data-theme="dark"] .markdown-content h1:nth-of-type(7),
+[data-theme="dark"] .markdown-content h1:nth-of-type(12) {
+    background-color: var(--chakra-colors-purple-900);
+    color: var(--chakra-colors-purple-100);
+    border-color: var(--chakra-colors-purple-700);
+}
+
+/* Testimonial styling */
+.markdown-content h1:nth-of-type(9) + p /* Social Proof */ {
+    background-color: var(--chakra-colors-gray-50);
+    padding: 1.5rem;
+    border-left: 4px solid var(--chakra-colors-purple-200);
+    border-radius: 4px;
+    font-style: italic;
+    margin: 1.5rem 0;
+}
+
+[data-theme="dark"] .markdown-content h1:nth-of-type(9) + p {
+    background-color: var(--chakra-colors-gray-800);
+    border-left-color: var(--chakra-colors-purple-500);
+}
+
+/* Product benefits styling */
+.markdown-content h1:nth-of-type(8) + p /* Product Mechanism */ {
+    background-color: var(--chakra-colors-purple-50);
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--chakra-colors-purple-100);
+    margin: 1.5rem 0;
+}
+
+[data-theme="dark"] .markdown-content h1:nth-of-type(8) + p {
+    background-color: var(--chakra-colors-gray-800);
+    border-color: var(--chakra-colors-purple-700);
+    color: var(--chakra-colors-gray-100);
+}
+
+/* Urgency sections */
+.markdown-content h1:nth-of-type(11) + p /* Scarcity/Urgency */ {
+    background-color: var(--chakra-colors-purple-50);
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--chakra-colors-purple-100);
+    margin: 1.5rem 0;
+    font-weight: 500;
+}
+
+[data-theme="dark"] .markdown-content h1:nth-of-type(11) + p {
+    background-color: var(--chakra-colors-gray-800);
+    border-color: var(--chakra-colors-purple-700);
+    color: var(--chakra-colors-gray-100);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .markdown-content {
+        padding: 0 1rem;
+    }
+
+    .markdown-content h1 {
+        font-size: 2rem;
+    }
+
+    .markdown-content h2 {
+        font-size: 1.5rem;
+    }
+
+    .markdown-content p {
+        font-size: 1rem;
+    }
+} 

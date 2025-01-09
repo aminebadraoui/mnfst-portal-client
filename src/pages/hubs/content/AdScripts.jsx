@@ -15,10 +15,17 @@ import {
     TabPanel,
     Spinner,
     useColorModeValue,
+    Select,
+    FormControl,
+    FormLabel,
+    Alert,
+    AlertIcon,
 } from "@chakra-ui/react";
 import ReactMarkdown from 'react-markdown';
 import useProjectStore from "../../../store/projectStore";
 import { generateAdvertorials, getAdvertorial, getAdvertorials, deleteAllAdvertorials } from "../../../services/advertorialService";
+import { getProducts } from "../../../services/productService";
+import '../../../styles/advertorials.css';
 
 // Helper function to parse and format advertorial content
 const parseAdvertorialContent = (advertorial) => {
@@ -51,6 +58,8 @@ const parseAdvertorialContent = (advertorial) => {
 export default function AdScripts() {
     const { projectId } = useParams();
     const [loading, setLoading] = useState(false);
+    const [products, setProducts] = useState([]);
+    const [selectedProduct, setSelectedProduct] = useState(null);
     const [advertorials, setAdvertorials] = useState({
         story: null,
         value: null,
@@ -63,6 +72,24 @@ export default function AdScripts() {
     const boxBg = useColorModeValue('white', 'gray.700');
     const textColor = useColorModeValue('gray.800', 'white');
     const borderColor = useColorModeValue('gray.200', 'gray.600');
+
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                const data = await getProducts(projectId);
+                setProducts(data);
+            } catch (error) {
+                toast({
+                    title: 'Error fetching products',
+                    description: error.message,
+                    status: 'error',
+                    duration: 5000,
+                    isClosable: true,
+                });
+            }
+        };
+        fetchProducts();
+    }, [projectId]);
 
     useEffect(() => {
         const fetchExistingAdvertorials = async () => {
@@ -88,6 +115,11 @@ export default function AdScripts() {
         fetchExistingAdvertorials();
     }, [projectId]);
 
+    const handleProductSelect = (e) => {
+        const product = products.find(p => p.id === e.target.value);
+        setSelectedProduct(product);
+    };
+
     const handleCreateNew = async () => {
         if (!project) {
             toast({
@@ -100,10 +132,23 @@ export default function AdScripts() {
             return;
         }
 
+        if (!selectedProduct) {
+            toast({
+                title: "Error",
+                description: "Please select a product first",
+                status: "error",
+                duration: 3000,
+                isClosable: true,
+            });
+            return;
+        }
+
         setLoading(true);
         try {
-            const result = await generateAdvertorials(projectId, {
-                productDescription: project.description
+            await generateAdvertorials(projectId, {
+                project_description: JSON.stringify(project),
+                product_description: JSON.stringify(selectedProduct),
+                product_id: selectedProduct.id
             });
 
             // Fetch all advertorials to get the updated list
@@ -183,14 +228,42 @@ export default function AdScripts() {
                 <Heading size="lg">Advertorials</Heading>
                 <Text>Generate different types of advertorials for your project.</Text>
 
-                <Button
-                    colorScheme="blue"
-                    onClick={handleCreateNew}
-                    isLoading={loading}
-                    loadingText="Generating..."
-                >
-                    Create New Advertorials Set
-                </Button>
+                {products.length === 0 ? (
+                    <Alert status="warning">
+                        <AlertIcon />
+                        You need to create at least one product before generating advertorials.
+                        Please go to the Products section to create a product first.
+                    </Alert>
+                ) : (
+                    <Box>
+                        <FormControl mb={4}>
+                            <FormLabel>Select Product</FormLabel>
+                            <Select
+                                placeholder="Choose a product"
+                                onChange={handleProductSelect}
+                                value={selectedProduct?.id || ''}
+                                isRequired
+                            >
+                                {products.map(product => (
+                                    <option key={product.id} value={product.id}>
+                                        {product.name}
+                                    </option>
+                                ))}
+                            </Select>
+                        </FormControl>
+
+                        <Button
+                            colorScheme="blue"
+                            onClick={handleCreateNew}
+                            isLoading={loading}
+                            loadingText="Generating..."
+                            isDisabled={!selectedProduct}
+                            width="full"
+                        >
+                            Create New Advertorials Set
+                        </Button>
+                    </Box>
+                )}
 
                 {(advertorials.story?.length > 0 || advertorials.value?.length > 0 || advertorials.info?.length > 0) && (
                     <Button
@@ -226,20 +299,19 @@ export default function AdScripts() {
                                     {advertorials.story?.map((ad, index) => (
                                         <Box
                                             key={ad.id}
-                                            p={6}
                                             bg={boxBg}
-                                            borderRadius="lg"
-                                            boxShadow="lg"
-                                            borderWidth="1px"
-                                            borderColor={borderColor}
-                                            mb={4}
+                                            borderRadius="xl"
+                                            boxShadow="xl"
+                                            overflow="hidden"
+                                            mb={8}
                                         >
-                                            <Text color={textColor} fontSize="sm" mb={2}>
-                                                Generated on: {new Date(ad.created_at).toLocaleString()}
-                                            </Text>
+                                            <Box p={4} bg={useColorModeValue('gray.50', 'gray.700')}>
+                                                <Text fontSize="sm" color={useColorModeValue('gray.600', 'gray.400')}>
+                                                    Generated on: {ad.created_at ? new Date(ad.created_at).toLocaleString() : 'Not yet generated'}
+                                                </Text>
+                                            </Box>
                                             <Box
-                                                color={textColor}
-                                                fontSize="lg"
+                                                p={8}
                                                 className="markdown-content"
                                             >
                                                 <ReactMarkdown>{parseAdvertorialContent(ad)}</ReactMarkdown>
@@ -252,20 +324,19 @@ export default function AdScripts() {
                                     {advertorials.value?.map((ad, index) => (
                                         <Box
                                             key={ad.id}
-                                            p={6}
                                             bg={boxBg}
-                                            borderRadius="lg"
-                                            boxShadow="lg"
-                                            borderWidth="1px"
-                                            borderColor={borderColor}
-                                            mb={4}
+                                            borderRadius="xl"
+                                            boxShadow="xl"
+                                            overflow="hidden"
+                                            mb={8}
                                         >
-                                            <Text color={textColor} fontSize="sm" mb={2}>
-                                                Generated on: {new Date(ad.created_at).toLocaleString()}
-                                            </Text>
+                                            <Box p={4} bg={useColorModeValue('gray.50', 'gray.700')}>
+                                                <Text fontSize="sm" color={useColorModeValue('gray.600', 'gray.400')}>
+                                                    Generated on: {ad.created_at ? new Date(ad.created_at).toLocaleString() : 'Not yet generated'}
+                                                </Text>
+                                            </Box>
                                             <Box
-                                                color={textColor}
-                                                fontSize="lg"
+                                                p={8}
                                                 className="markdown-content"
                                             >
                                                 <ReactMarkdown>{parseAdvertorialContent(ad)}</ReactMarkdown>
@@ -278,20 +349,19 @@ export default function AdScripts() {
                                     {advertorials.info?.map((ad, index) => (
                                         <Box
                                             key={ad.id}
-                                            p={6}
                                             bg={boxBg}
-                                            borderRadius="lg"
-                                            boxShadow="lg"
-                                            borderWidth="1px"
-                                            borderColor={borderColor}
-                                            mb={4}
+                                            borderRadius="xl"
+                                            boxShadow="xl"
+                                            overflow="hidden"
+                                            mb={8}
                                         >
-                                            <Text color={textColor} fontSize="sm" mb={2}>
-                                                Generated on: {new Date(ad.created_at).toLocaleString()}
-                                            </Text>
+                                            <Box p={4} bg={useColorModeValue('gray.50', 'gray.700')}>
+                                                <Text fontSize="sm" color={useColorModeValue('gray.600', 'gray.400')}>
+                                                    Generated on: {ad.created_at ? new Date(ad.created_at).toLocaleString() : 'Not yet generated'}
+                                                </Text>
+                                            </Box>
                                             <Box
-                                                color={textColor}
-                                                fontSize="lg"
+                                                p={8}
                                                 className="markdown-content"
                                             >
                                                 <ReactMarkdown>{parseAdvertorialContent(ad)}</ReactMarkdown>
