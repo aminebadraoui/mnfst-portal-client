@@ -5,6 +5,7 @@ import ResearchHub from '../pages/hubs/research/ResearchHub';
 import ContentHub from '../pages/hubs/ContentHub';
 import CommunicationHub from '../pages/hubs/CommunicationHub';
 import StrategyHub from '../pages/hubs/StrategyHub';
+import ProductsHub from '../pages/hubs/ProductsHub';
 
 // Research Hub Components
 import PainAnalysisDetail from '../pages/hubs/research/PainAnalysisDetail';
@@ -17,6 +18,9 @@ import AvatarsDetail from '../pages/hubs/research/AvatarsDetail';
 import Avatars from '../pages/hubs/content/Avatars';
 import AdScripts from '../pages/hubs/content/AdScripts';
 import CreateAdvertorials from '../pages/hubs/content/CreateAdvertorials';
+
+// Products Hub Components
+import ProductsList from '../pages/hubs/products/ProductsList';
 
 // Communication Hub Components
 import Chatbots from '../pages/hubs/communication/Chatbots';
@@ -67,6 +71,9 @@ const ProjectRoutes = () => {
                 <Route path="social-media-studio" element={<SocialMediaStudio />} />
                 <Route path="email-studio" element={<EmailStudio />} />
             </Route>
+
+            {/* Products Hub Routes */}
+            <Route path="products" element={<ProductsList />} />
 
             {/* Communication Hub Routes */}
             <Route path="communication">

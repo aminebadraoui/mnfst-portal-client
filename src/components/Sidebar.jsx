@@ -32,6 +32,7 @@ import {
     FaQuestionCircle,
     FaShoppingCart,
     FaUserCircle,
+    FaBox,
 } from 'react-icons/fa';
 import { useAuthStore } from '../store/authStore';
 import ProjectsModal from './ProjectsModal';
@@ -99,6 +100,7 @@ const ProjectFeatures = ({ projectId }) => {
     ];
 
     const features = [
+        { name: 'Products & Services', icon: FaBox, path: 'products', color: 'teal' },
         {
             name: 'Research Hub',
             icon: FaSearch,

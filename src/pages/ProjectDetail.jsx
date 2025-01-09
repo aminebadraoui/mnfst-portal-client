@@ -16,7 +16,7 @@ import {
     BreadcrumbLink,
     Spinner,
 } from '@chakra-ui/react';
-import { FaSearch, FaPencilAlt, FaComments, FaChartLine, FaTrash, FaChevronRight } from 'react-icons/fa';
+import { FaSearch, FaPencilAlt, FaComments, FaChartLine, FaTrash, FaChevronRight, FaBox } from 'react-icons/fa';
 import { Link as RouterLink, useParams, useNavigate } from 'react-router-dom';
 import useProjectStore from '../store/projectStore';
 import DeleteProjectModal from '../components/DeleteProjectModal';
@@ -141,6 +141,13 @@ const ProjectDetail = () => {
                 </Box>
 
                 <SimpleGrid columns={{ base: 1, lg: 2 }} spacing={8}>
+                    <HubCard
+                        icon={FaBox}
+                        title="Products & Services"
+                        description="Create and manage your products and services with features, benefits, and pricing"
+                        to="products"
+                        color="teal.500"
+                    />
                     <HubCard
                         icon={FaSearch}
                         title="Research Hub"
