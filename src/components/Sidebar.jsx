@@ -39,18 +39,20 @@ import ProjectsModal from './ProjectsModal';
 import useProjectStore from '../store/projectStore';
 import ThemeToggle from './ThemeToggle';
 
-const NavItem = ({ icon, children, to, onClick, indent = false, isHeader = false, rightElement, isActive = false, isExpanded = false, onToggle, isFeature = false, px }) => {
+const NavItem = ({ icon, children, to, onClick, indent = false, isHeader = false, rightElement, isActive = false, isExpanded = false, onToggle, isFeature = false, px, level = 0 }) => {
     const location = useLocation();
     const isCurrentPath = to && location.pathname.startsWith(to);
     const featureColor = useColorModeValue('gray.600', 'gray.400');
+    const bgHover = useColorModeValue('gray.100', 'gray.700');
+    const bgSelected = useColorModeValue('gray.50', 'gray.800');
 
     return (
         <Flex
             as={to ? RouterLink : 'div'}
             to={to}
             align="center"
-            px={px || "4"}
-            py={indent ? "1" : "2"}
+            px={px || (level === 0 ? "4" : level === 1 ? "6" : "8")}
+            py={level === 0 ? "3" : "2"}
             cursor="pointer"
             color={isActive || isCurrentPath
                 ? "accent.emphasized"
@@ -59,28 +61,37 @@ const NavItem = ({ icon, children, to, onClick, indent = false, isHeader = false
                     : isHeader
                         ? "text.default"
                         : "text.muted"}
-            bg={isActive || isCurrentPath ? "bg.selected" : "transparent"}
+            bg={isActive || isCurrentPath ? bgSelected : "transparent"}
             _hover={{
-                bg: "bg.hover",
+                bg: bgHover,
                 color: "accent.emphasized",
             }}
             onClick={onClick}
             role="group"
-            borderLeft={indent ? "1px" : "0"}
+            borderLeft={level > 0 ? "2px" : "0"}
             borderLeftColor={isActive || isCurrentPath ? "accent.default" : "transparent"}
-            fontSize={isFeature ? "sm" : "md"}
-            fontWeight={isHeader ? "semibold" : isFeature ? "normal" : "medium"}
+            fontSize={level === 2 ? "sm" : "md"}
+            fontWeight={isHeader ? "semibold" : level === 2 ? "normal" : "medium"}
             transition="all 0.2s"
+            position="relative"
         >
-            <Icon
-                as={icon}
-                mr="3"
-                fontSize={isFeature ? "14" : "16"}
-                color="inherit"
-            />
+            {icon && (
+                <Icon
+                    as={icon}
+                    mr="3"
+                    fontSize={level === 2 ? "14" : "16"}
+                    color={isActive || isCurrentPath ? "accent.emphasized" : "inherit"}
+                />
+            )}
             <Text flex="1">{children}</Text>
             {rightElement && (
-                <Box ml="2">{rightElement}</Box>
+                <Icon
+                    as={isExpanded ? FaChevronDown : FaChevronRight}
+                    ml="2"
+                    fontSize="12"
+                    transition="all 0.2s"
+                    transform={isExpanded ? "rotate(0deg)" : "rotate(0deg)"}
+                />
             )}
         </Flex>
     );
@@ -90,13 +101,14 @@ const ProjectFeatures = ({ projectId }) => {
     const location = useLocation();
     const navigate = useNavigate();
     const [isResearchOpen, setIsResearchOpen] = useState(false);
+    const bgHover = useColorModeValue('gray.100', 'gray.700');
 
     const researchSubItems = [
-        { name: 'Pain & Frustration Analysis', path: 'pain-analysis', icon: FaExclamationCircle },
-        { name: 'Question & Advice Mapping', path: 'question-advice', icon: FaQuestionCircle },
-        { name: 'Pattern Detection', path: 'pattern-detection', icon: FaChartLine },
-        { name: 'Popular Products Analysis', path: 'product-analysis', icon: FaShoppingCart },
-        { name: 'User Avatars', path: 'avatars', icon: FaUserCircle },
+        { name: 'Pain & Frustration Analysis', path: 'pain-analysis' },
+        { name: 'Question & Advice Mapping', path: 'question-advice' },
+        { name: 'Pattern Detection', path: 'pattern-detection' },
+        { name: 'Popular Products Analysis', path: 'product-analysis' },
+        { name: 'User Avatars', path: 'avatars' },
     ];
 
     const features = [
@@ -113,7 +125,6 @@ const ProjectFeatures = ({ projectId }) => {
         { name: 'Strategy Hub', icon: FaChartLine, path: 'strategy', color: 'orange' },
     ];
 
-    // Auto-open research submenu when in research routes, close otherwise
     useEffect(() => {
         const researchBasePath = `/projects/${projectId}/research`;
         const isInResearch = location.pathname.startsWith(researchBasePath);
@@ -121,7 +132,7 @@ const ProjectFeatures = ({ projectId }) => {
     }, [location.pathname, projectId]);
 
     return (
-        <VStack align="stretch" spacing={0}>
+        <VStack align="stretch" spacing={1}>
             {features.map((feature) => {
                 const basePath = `/projects/${projectId}/${feature.path}`;
                 const isActive = location.pathname.startsWith(basePath);
@@ -133,9 +144,9 @@ const ProjectFeatures = ({ projectId }) => {
                             icon={feature.icon}
                             to={basePath}
                             isActive={isActive}
-                            isFeature={true}
-                            indent={true}
-                            px="6"
+                            level={1}
+                            rightElement={isResearchHub}
+                            isExpanded={isResearchOpen}
                             onClick={isResearchHub ? (e) => {
                                 e.preventDefault();
                                 setIsResearchOpen(!isResearchOpen);
@@ -144,21 +155,20 @@ const ProjectFeatures = ({ projectId }) => {
                         >
                             {feature.name}
                         </NavItem>
-                        {isResearchHub && isResearchOpen && (
-                            <VStack align="stretch" spacing={0} mb={4}>
-                                {researchSubItems.map((subItem, idx) => (
-                                    <NavItem
-                                        key={subItem.name}
-                                        icon={subItem.icon}
-                                        to={`${basePath}/${subItem.path}`}
-                                        isFeature={true}
-                                        indent={true}
-                                        px="10"
-                                    >
-                                        {subItem.name}
-                                    </NavItem>
-                                ))}
-                            </VStack>
+                        {isResearchHub && (
+                            <Collapse in={isResearchOpen}>
+                                <VStack align="stretch" spacing={0} pl={2}>
+                                    {researchSubItems.map((subItem) => (
+                                        <NavItem
+                                            key={subItem.name}
+                                            to={`${basePath}/${subItem.path}`}
+                                            level={2}
+                                        >
+                                            {subItem.name}
+                                        </NavItem>
+                                    ))}
+                                </VStack>
+                            </Collapse>
                         )}
                     </Box>
                 );
@@ -213,7 +223,7 @@ const Sidebar = () => {
 
     return (
         <Box
-            w={{ base: 'full', md: '64' }}
+            w={{ base: 'full', md: '280px' }}
             h="full"
             bg="sidebar.bg"
             borderRight="1px"
@@ -222,8 +232,20 @@ const Sidebar = () => {
             left="0"
             top="0"
             overflowY="auto"
+            css={{
+                '&::-webkit-scrollbar': {
+                    width: '4px',
+                },
+                '&::-webkit-scrollbar-track': {
+                    width: '6px',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                    background: 'gray.300',
+                    borderRadius: '24px',
+                },
+            }}
         >
-            <VStack h="full" spacing={4} align="stretch" py={5}>
+            <VStack h="full" spacing={6} align="stretch" py={5}>
                 <Flex px={4} align="center" justify="space-between">
                     <Text
                         fontSize="2xl"
@@ -235,68 +257,63 @@ const Sidebar = () => {
                     <ThemeToggle />
                 </Flex>
 
-                <VStack spacing={2} align="stretch">
-                    <NavItem icon={FaHome} to="/chat" isHeader={true}>
+                <VStack spacing={4} align="stretch">
+                    <NavItem icon={FaHome} to="/chat" isHeader={true} level={0}>
                         Home
                     </NavItem>
-                    <Divider opacity="0.1" />
-                    <Button
-                        variant="ghost"
-                        onClick={onOpen}
-                        leftIcon={<FaPlus />}
-                        justifyContent="flex-start"
-                        px="4"
-                        w="full"
-                        color="text.muted"
-                        _hover={{
-                            bg: "bg.hover",
-                            color: "accent.emphasized"
-                        }}
-                    >
-                        New Project
-                    </Button>
-                    {projects?.map((project) => (
-                        <React.Fragment key={project.id}>
-                            <NavItem
-                                icon={FaFolder}
-                                to={`/projects/${project.id}`}
-                                isActive={expandedProject === project.id}
-                                onToggle={() => handleProjectClick(project.id)}
-                                isExpanded={expandedProject === project.id}
-                                onClick={() => handleProjectClick(project.id)}
+
+                    <Box>
+                        <Flex px={4} py={2} align="center">
+                            <Text fontSize="sm" fontWeight="medium" color="gray.500">
+                                PROJECTS
+                            </Text>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={onOpen}
+                                ml="auto"
+                                leftIcon={<FaPlus />}
+                                color="gray.500"
+                                _hover={{ color: "accent.emphasized" }}
                             >
-                                {project.name}
+                                New
+                            </Button>
+                        </Flex>
+                        <VStack align="stretch" spacing={0}>
+                            {projects.map((project) => (
+                                <Box key={project.id}>
+                                    <NavItem
+                                        icon={FaFolder}
+                                        onClick={() => handleProjectClick(project.id)}
+                                        isActive={expandedProject === project.id}
+                                        rightElement={true}
+                                        isExpanded={expandedProject === project.id}
+                                        level={0}
+                                    >
+                                        {project.name}
+                                    </NavItem>
+                                    <Collapse in={expandedProject === project.id}>
+                                        <ProjectFeatures projectId={project.id} />
+                                    </Collapse>
+                                </Box>
+                            ))}
+                        </VStack>
+                    </Box>
+
+                    <Box mt="auto">
+                        <Divider opacity="0.1" mb={4} />
+                        <VStack spacing={2} align="stretch">
+                            <NavItem to="/past-runs" level={0}>
+                                Past Runs
                             </NavItem>
-                            <Collapse in={expandedProject === project.id}>
-                                <ProjectFeatures projectId={project.id} />
-                            </Collapse>
-                        </React.Fragment>
-                    ))}
-                    <NavItem icon={FaHome} to="/dashboard">
-                        Agents Dashboard
-                    </NavItem>
-                    <NavItem icon={FaHistory} to="/past-runs">
-                        Past Runs
-                    </NavItem>
-                    <NavItem icon={FaUser} to="/profile">
-                        Profile
-                    </NavItem>
-                    <Button
-                        variant="ghost"
-                        onClick={handleLogout}
-                        leftIcon={<FaSignOutAlt />}
-                        justifyContent="flex-start"
-                        px="4"
-                        w="full"
-                        mt="auto"
-                        color="text.muted"
-                        _hover={{
-                            bg: "bg.hover",
-                            color: "accent.emphasized"
-                        }}
-                    >
-                        Logout
-                    </Button>
+                            <NavItem to="/profile" level={0}>
+                                Profile
+                            </NavItem>
+                            <NavItem icon={FaSignOutAlt} onClick={handleLogout} level={0}>
+                                Logout
+                            </NavItem>
+                        </VStack>
+                    </Box>
                 </VStack>
             </VStack>
             <ProjectsModal isOpen={isOpen} onClose={onClose} />
