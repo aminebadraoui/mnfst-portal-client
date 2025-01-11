@@ -11,8 +11,6 @@ import {
     Spinner,
     Badge,
     Select,
-    UnorderedList,
-    ListItem,
     Breadcrumb,
     BreadcrumbItem,
     BreadcrumbLink,
@@ -20,6 +18,33 @@ import {
 import { FaArrowLeft, FaExclamationCircle, FaChevronRight } from 'react-icons/fa';
 import { useParams, useNavigate, Link as RouterLink } from 'react-router-dom';
 import api from '../../../services/api';
+
+const severityColors = {
+    critical: "red",
+    major: "orange",
+    minor: "yellow"
+};
+
+// Helper function to determine severity color with fallback
+const getSeverityColor = (severity) => {
+    if (!severity) return "gray";
+    return severityColors[severity.toLowerCase()] || "gray";
+};
+
+// Helper function to format engagement metrics
+const formatEngagement = (insight) => {
+    if (insight.engagement && typeof insight.engagement === 'object') {
+        return {
+            upvotes: insight.engagement.upvotes || 0,
+            comments: insight.engagement.comments || 0
+        };
+    }
+    // Handle old format
+    return {
+        upvotes: insight.engagement_metrics?.upvotes || 0,
+        comments: insight.engagement_metrics?.comments || 0
+    };
+};
 
 export default function PainAnalysisDetail() {
     const { projectId } = useParams();
@@ -38,7 +63,7 @@ export default function PainAnalysisDetail() {
                 const queries = queriesResponse.data || [];
                 setAvailableQueries(queries);
 
-                // Then fetch insights for Pain & Frustration Analysis
+                // Then fetch insights for Pain Analysis
                 const response = await api.get(`/research-hub/Pain & Frustration Analysis/project/${projectId}`);
                 console.log('Pain Analysis response:', response.data);
 
@@ -46,7 +71,6 @@ export default function PainAnalysisDetail() {
                 const analysisData = response.data || [];
                 const extractedInsights = analysisData.flatMap(analysis => {
                     if (analysis.insights && Array.isArray(analysis.insights)) {
-                        // Each insight already has its query field, so we don't need to add it
                         return analysis.insights;
                     }
                     return [];
@@ -94,9 +118,160 @@ export default function PainAnalysisDetail() {
         ? insights.filter(insight => insight.query === selectedQuery)
         : insights;
 
+    const renderInsight = (insight) => (
+        <Box
+            key={insight.id || Math.random()}
+            p={6}
+            borderWidth="1px"
+            borderRadius="lg"
+            bg="white"
+            _dark={{ bg: 'gray.700' }}
+        >
+            <VStack align="start" spacing={4}>
+                {insight.query && (
+                    <Badge
+                        display="block"
+                        w="full"
+                        bg="red.100"
+                        color="red.800"
+                        px={2}
+                        py={2}
+                        borderRadius="md"
+                        mb={4}
+                        _dark={{
+                            bg: 'red.900',
+                            color: 'red.100'
+                        }}
+                    >
+                        QUERY: {insight.query.toUpperCase()}
+                    </Badge>
+                )}
+
+                <HStack w="full" justify="space-between" align="center">
+                    <Text fontSize="xl" fontWeight="bold" mb={2}>
+                        {insight.title}
+                    </Text>
+                    {insight.severity && (
+                        <Badge
+                            colorScheme={
+                                insight.severity === 'critical' ? 'red' :
+                                    insight.severity === 'major' ? 'orange' :
+                                        'yellow'
+                            }
+                            fontSize="md"
+                            px={3}
+                            py={1}
+                        >
+                            {insight.severity}
+                        </Badge>
+                    )}
+                </HStack>
+
+                <Box p={4} bg="gray.50" borderRadius="md" mb={4} w="full" _dark={{ bg: 'gray.800' }}>
+                    <Text fontStyle="italic" color="gray.600" _dark={{ color: 'gray.400' }}>
+                        {insight.pain_quote}
+                    </Text>
+                </Box>
+
+                <Box w="full">
+                    <Text color="purple.600" fontWeight="medium" mb={2} _dark={{ color: 'purple.300' }}>
+                        Impact:
+                    </Text>
+                    <Text>{insight.impact}</Text>
+                    {insight.impact_quote && (
+                        <Box p={4} bg="gray.50" borderRadius="md" mt={2} _dark={{ bg: 'gray.800' }}>
+                            <Text fontStyle="italic" color="gray.600" _dark={{ color: 'gray.400' }}>
+                                {insight.impact_quote}
+                            </Text>
+                        </Box>
+                    )}
+                </Box>
+
+                {insight.solution_attempt && (
+                    <Box w="full">
+                        <Text color="green.600" fontWeight="medium" mb={2} _dark={{ color: 'green.300' }}>
+                            Solution Attempt:
+                        </Text>
+                        <Text>{insight.solution_attempt}</Text>
+                        {insight.solution_quote && (
+                            <Box p={4} bg="gray.50" borderRadius="md" mt={2} _dark={{ bg: 'gray.800' }}>
+                                <Text fontStyle="italic" color="gray.600" _dark={{ color: 'gray.400' }}>
+                                    {insight.solution_quote}
+                                </Text>
+                            </Box>
+                        )}
+                    </Box>
+                )}
+
+                {insight.consequences && (
+                    <Box w="full">
+                        <Text color="red.600" fontWeight="medium" mb={2} _dark={{ color: 'red.300' }}>
+                            Consequences:
+                        </Text>
+                        <Text>{insight.consequences}</Text>
+                        {insight.consequence_quote && (
+                            <Box p={4} bg="gray.50" borderRadius="md" mt={2} _dark={{ bg: 'gray.800' }}>
+                                <Text fontStyle="italic" color="gray.600" _dark={{ color: 'gray.400' }}>
+                                    {insight.consequence_quote}
+                                </Text>
+                            </Box>
+                        )}
+                    </Box>
+                )}
+
+                {insight.workaround && (
+                    <Box w="full">
+                        <Text color="blue.600" fontWeight="medium" mb={2} _dark={{ color: 'blue.300' }}>
+                            Workaround:
+                        </Text>
+                        <Text>{insight.workaround}</Text>
+                        {insight.workaround_quote && (
+                            <Box p={4} bg="gray.50" borderRadius="md" mt={2} _dark={{ bg: 'gray.800' }}>
+                                <Text fontStyle="italic" color="gray.600" _dark={{ color: 'gray.400' }}>
+                                    {insight.workaround_quote}
+                                </Text>
+                            </Box>
+                        )}
+                    </Box>
+                )}
+
+                {insight.source_url && (
+                    <Box w="full">
+                        <Text color="orange.600" fontWeight="medium" mb={2} _dark={{ color: 'orange.300' }}>
+                            Source:
+                        </Text>
+                        <Text>{insight.source_url}</Text>
+                    </Box>
+                )}
+
+                {insight.engagement && (
+                    <Box w="full">
+                        <Text color="teal.600" fontWeight="medium" mb={2} _dark={{ color: 'teal.300' }}>
+                            Engagement:
+                        </Text>
+                        <HStack spacing={4}>
+                            <Badge colorScheme="blue">
+                                {insight.engagement.comments} comments
+                            </Badge>
+                            <Badge colorScheme="purple">
+                                {insight.engagement.upvotes} upvotes
+                            </Badge>
+                            {insight.engagement.frequency && (
+                                <Badge colorScheme="green">
+                                    {insight.engagement.frequency} mentions
+                                </Badge>
+                            )}
+                        </HStack>
+                    </Box>
+                )}
+            </VStack>
+        </Box>
+    );
+
     return (
         <Container maxW="container.xl" py={8}>
             <VStack spacing={6} align="stretch">
+                {/* Header Section */}
                 <HStack spacing={4} align="center">
                     <Button
                         leftIcon={<FaArrowLeft />}
@@ -117,6 +292,7 @@ export default function PainAnalysisDetail() {
                     </Breadcrumb>
                 </HStack>
 
+                {/* Title Section */}
                 <Box>
                     <HStack mb={2}>
                         <Icon as={FaExclamationCircle} color="purple.500" boxSize={6} />
@@ -144,95 +320,10 @@ export default function PainAnalysisDetail() {
                     </HStack>
                 </Box>
 
-                {/* Content Section */}
+                {/* Insights Section */}
                 {filteredInsights.length > 0 ? (
                     <VStack spacing={6} align="stretch">
-                        {filteredInsights.map((insight, index) => (
-                            <Box
-                                key={index}
-                                p={6}
-                                borderWidth="1px"
-                                borderRadius="lg"
-                                bg="white"
-                                _dark={{ bg: 'gray.700' }}
-                            >
-                                <VStack align="start" spacing={4}>
-                                    {insight.query && (
-                                        <Badge
-                                            display="block"
-                                            w="full"
-                                            bg="purple.100"
-                                            color="purple.800"
-                                            px={2}
-                                            py={2}
-                                            borderRadius="md"
-                                            mb={4}
-                                            _dark={{
-                                                bg: 'purple.900',
-                                                color: 'purple.100'
-                                            }}
-                                        >
-                                            QUERY: {insight.query.toUpperCase()}
-                                        </Badge>
-                                    )}
-
-                                    <Text fontSize="lg" fontWeight="medium" mb={2}>
-                                        {insight.title}
-                                    </Text>
-
-                                    <Box p={4} bg="gray.50" borderRadius="md" mb={4} w="full" _dark={{ bg: 'gray.800' }}>
-                                        <Text fontStyle="italic" color="gray.600" _dark={{ color: 'gray.400' }}>
-                                            {insight.evidence}
-                                        </Text>
-                                    </Box>
-
-                                    {insight.frequency && (
-                                        <Box w="full">
-                                            <Text color="red.600" fontWeight="medium" mb={2} _dark={{ color: 'red.300' }}>
-                                                Frequency:
-                                            </Text>
-                                            <Text>{insight.frequency}</Text>
-                                        </Box>
-                                    )}
-
-                                    {insight.correlation && (
-                                        <Box w="full">
-                                            <Text color="orange.600" fontWeight="medium" mb={2} _dark={{ color: 'orange.300' }}>
-                                                Correlation:
-                                            </Text>
-                                            <Text>{insight.correlation}</Text>
-                                        </Box>
-                                    )}
-
-                                    {insight.significance && (
-                                        <Box w="full">
-                                            <Text color="purple.600" fontWeight="medium" mb={2} _dark={{ color: 'purple.300' }}>
-                                                Significance:
-                                            </Text>
-                                            <Text>{insight.significance}</Text>
-                                        </Box>
-                                    )}
-
-                                    {insight.source_url && (
-                                        <Box w="full">
-                                            <Text color="blue.600" fontWeight="medium" mb={2} _dark={{ color: 'blue.300' }}>
-                                                Source:
-                                            </Text>
-                                            <Text>{insight.source_url}</Text>
-                                        </Box>
-                                    )}
-
-                                    {insight.engagement_metrics && (
-                                        <Box w="full">
-                                            <Text color="green.600" fontWeight="medium" mb={2} _dark={{ color: 'green.300' }}>
-                                                Engagement:
-                                            </Text>
-                                            <Text>{insight.engagement_metrics}</Text>
-                                        </Box>
-                                    )}
-                                </VStack>
-                            </Box>
-                        ))}
+                        {filteredInsights.map(renderInsight)}
                     </VStack>
                 ) : (
                     <Box
@@ -248,7 +339,7 @@ export default function PainAnalysisDetail() {
                         <Text color="gray.500">
                             {selectedQuery
                                 ? `No pain points found for query "${selectedQuery}"`
-                                : "Discover what frustrates your users and identify common pain points in their experience. Generate insights to understand the challenges they face and how they affect their journey."}
+                                : "No pain points have been analyzed yet"}
                         </Text>
                     </Box>
                 )}

@@ -95,6 +95,103 @@ export default function QuestionAdviceDetail() {
         ? insights.filter(insight => insight.query === selectedQuery)
         : insights;
 
+    const renderInsight = (insight) => (
+        <Box
+            key={insight.id || Math.random()}
+            p={6}
+            borderWidth="1px"
+            borderRadius="lg"
+            bg="white"
+            _dark={{ bg: 'gray.700' }}
+        >
+            <VStack align="start" spacing={4}>
+                {insight.query && (
+                    <Badge
+                        display="block"
+                        w="full"
+                        bg="purple.100"
+                        color="purple.800"
+                        px={2}
+                        py={2}
+                        borderRadius="md"
+                        mb={4}
+                        _dark={{
+                            bg: 'purple.900',
+                            color: 'purple.100'
+                        }}
+                    >
+                        QUERY: {insight.query.toUpperCase()}
+                    </Badge>
+                )}
+
+                <Text fontSize="lg" fontWeight="medium" mb={2}>
+                    {insight.title}
+                </Text>
+
+                <Box p={4} bg="gray.50" borderRadius="md" mb={4} w="full" _dark={{ bg: 'gray.800' }}>
+                    <Text fontStyle="italic" color="gray.600" _dark={{ color: 'gray.400' }}>
+                        {insight.evidence}
+                    </Text>
+                </Box>
+
+                {insight.question_type && (
+                    <Box w="full">
+                        <Text color="blue.600" fontWeight="medium" mb={2} _dark={{ color: 'blue.300' }}>
+                            Question Type:
+                        </Text>
+                        <Badge colorScheme="blue" px={2} py={1} borderRadius="md">
+                            {insight.question_type}
+                        </Badge>
+                    </Box>
+                )}
+
+                {insight.suggested_answers && insight.suggested_answers.length > 0 && (
+                    <Box w="full">
+                        <Text color="green.600" fontWeight="medium" mb={2} _dark={{ color: 'green.300' }}>
+                            Suggested Answers:
+                        </Text>
+                        <UnorderedList>
+                            {insight.suggested_answers.map((answer, index) => (
+                                <ListItem key={index}>{answer}</ListItem>
+                            ))}
+                        </UnorderedList>
+                    </Box>
+                )}
+
+                {insight.related_questions && insight.related_questions.length > 0 && (
+                    <Box w="full">
+                        <Text color="purple.600" fontWeight="medium" mb={2} _dark={{ color: 'purple.300' }}>
+                            Related Questions:
+                        </Text>
+                        <UnorderedList>
+                            {insight.related_questions.map((question, index) => (
+                                <ListItem key={index}>{question}</ListItem>
+                            ))}
+                        </UnorderedList>
+                    </Box>
+                )}
+
+                {insight.source_url && (
+                    <Box w="full">
+                        <Text color="orange.600" fontWeight="medium" mb={2} _dark={{ color: 'orange.300' }}>
+                            Source:
+                        </Text>
+                        <Text>{insight.source_url}</Text>
+                    </Box>
+                )}
+
+                {insight.engagement_metrics && (
+                    <Box w="full">
+                        <Text color="teal.600" fontWeight="medium" mb={2} _dark={{ color: 'teal.300' }}>
+                            Engagement:
+                        </Text>
+                        <Text>{insight.engagement_metrics}</Text>
+                    </Box>
+                )}
+            </VStack>
+        </Box>
+    );
+
     return (
         <Container maxW="container.xl" py={8}>
             <VStack spacing={6} align="stretch">
@@ -148,92 +245,7 @@ export default function QuestionAdviceDetail() {
                 {/* Content Section */}
                 {filteredInsights.length > 0 ? (
                     <VStack spacing={6} align="stretch">
-                        {filteredInsights.map((insight, index) => (
-                            <Box
-                                key={index}
-                                p={6}
-                                borderWidth="1px"
-                                borderRadius="lg"
-                                bg="white"
-                                _dark={{ bg: 'gray.700' }}
-                            >
-                                <VStack align="start" spacing={4}>
-                                    {insight.query && (
-                                        <Badge
-                                            display="block"
-                                            w="full"
-                                            bg="purple.100"
-                                            color="purple.800"
-                                            px={2}
-                                            py={2}
-                                            borderRadius="md"
-                                            mb={4}
-                                            _dark={{
-                                                bg: 'purple.900',
-                                                color: 'purple.100'
-                                            }}
-                                        >
-                                            QUERY: {insight.query.toUpperCase()}
-                                        </Badge>
-                                    )}
-
-                                    <Text fontSize="lg" fontWeight="medium" mb={2}>
-                                        {insight.title}
-                                    </Text>
-
-                                    <Box p={4} bg="gray.50" borderRadius="md" mb={4} w="full" _dark={{ bg: 'gray.800' }}>
-                                        <Text fontStyle="italic" color="gray.600" _dark={{ color: 'gray.400' }}>
-                                            {insight.evidence}
-                                        </Text>
-                                    </Box>
-
-                                    {insight.frequency && (
-                                        <Box w="full">
-                                            <Text color="purple.600" fontWeight="medium" mb={2} _dark={{ color: 'purple.300' }}>
-                                                Frequency:
-                                            </Text>
-                                            <Text>{insight.frequency}</Text>
-                                        </Box>
-                                    )}
-
-                                    {insight.correlation && (
-                                        <Box w="full">
-                                            <Text color="blue.600" fontWeight="medium" mb={2} _dark={{ color: 'blue.300' }}>
-                                                Correlation:
-                                            </Text>
-                                            <Text>{insight.correlation}</Text>
-                                        </Box>
-                                    )}
-
-                                    {insight.significance && (
-                                        <Box w="full">
-                                            <Text color="green.600" fontWeight="medium" mb={2} _dark={{ color: 'green.300' }}>
-                                                Significance:
-                                            </Text>
-                                            <Text>{insight.significance}</Text>
-                                        </Box>
-                                    )}
-
-                                    {insight.source_url && (
-                                        <Box w="full">
-                                            <Text color="orange.600" fontWeight="medium" mb={2} _dark={{ color: 'orange.300' }}>
-                                                Source:
-                                            </Text>
-                                            <Text>{insight.source_url}</Text>
-                                        </Box>
-                                    )}
-
-                                    {insight.engagement_metrics && (
-                                        <Box w="full">
-                                            <Text color="teal.600" fontWeight="medium" mb={2} _dark={{ color: 'teal.300' }}>
-                                                Engagement:
-                                            </Text>
-                                            <Text>{insight.engagement_metrics}</Text>
-                                        </Box>
-                                    )}
-                                </VStack>
-                            </Box>
-                        ))}
+                        {filteredInsights.map(renderInsight)}
                     </VStack>
                 ) : (
                     <Box

@@ -14,6 +14,9 @@ import ProjectRoutes from './routes/projectRoutes';
 import GlobalLoadingBanner from './components/GlobalLoadingBanner';
 import useLoadingStore from './store/loadingStore';
 import Chat from './components/Chat/Chat';
+import DocsIndex from './pages/docs/DocsIndex';
+import DocPage from './pages/docs/DocPage';
+import PasswordGate from './components/PasswordGate';
 
 const PrivateRoute = ({ children }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -43,6 +46,10 @@ function App() {
 
         {/* Project Routes */}
         <Route path="/projects/:projectId/*" element={<PrivateRoute><ProjectRoutes /></PrivateRoute>} />
+
+        {/* Documentation Routes - Password Protected */}
+        <Route path="/docs" element={<PasswordGate><DocsIndex /></PasswordGate>} />
+        <Route path="/docs/:docId" element={<PasswordGate><DocPage /></PasswordGate>} />
 
         {/* Fallback Route */}
         <Route path="*" element={<Navigate to={isAuthenticated ? "/chat" : "/login"} replace />} />

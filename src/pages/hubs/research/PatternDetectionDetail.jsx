@@ -95,6 +95,158 @@ export default function PatternDetectionDetail() {
         ? insights.filter(insight => insight.query === selectedQuery)
         : insights;
 
+    const renderInsight = (insight) => (
+        <Box
+            key={insight.id || Math.random()}
+            p={6}
+            borderWidth="1px"
+            borderRadius="lg"
+            bg="white"
+            _dark={{ bg: 'gray.700' }}
+        >
+            <VStack align="start" spacing={4}>
+                {insight.query && (
+                    <Badge
+                        display="block"
+                        w="full"
+                        bg="blue.100"
+                        color="blue.800"
+                        px={2}
+                        py={2}
+                        borderRadius="md"
+                        mb={4}
+                        _dark={{
+                            bg: 'blue.900',
+                            color: 'blue.100'
+                        }}
+                    >
+                        QUERY: {insight.query.toUpperCase()}
+                    </Badge>
+                )}
+
+                <HStack w="full" justify="space-between" align="center">
+                    <Text fontSize="xl" fontWeight="bold" mb={2}>
+                        {insight.title}
+                    </Text>
+                    {insight.pattern_type && (
+                        <Badge colorScheme="blue" fontSize="md" px={3} py={1}>
+                            {insight.pattern_type}
+                        </Badge>
+                    )}
+                </HStack>
+
+                {insight.correlation && (
+                    <Box w="full">
+                        <Text color="purple.600" fontWeight="medium" mb={2} _dark={{ color: 'purple.300' }}>
+                            Correlation:
+                        </Text>
+                        <Text>{insight.correlation}</Text>
+                    </Box>
+                )}
+
+                <Box p={4} bg="gray.50" borderRadius="md" mb={4} w="full" _dark={{ bg: 'gray.800' }}>
+                    <Text fontStyle="italic" color="gray.600" _dark={{ color: 'gray.400' }}>
+                        {insight.evidence}
+                    </Text>
+                </Box>
+
+                {insight.significance && (
+                    <Box w="full">
+                        <Text color="green.600" fontWeight="medium" mb={2} _dark={{ color: 'green.300' }}>
+                            Significance:
+                        </Text>
+                        <Text>{insight.significance}</Text>
+                    </Box>
+                )}
+
+                {insight.frequency && (
+                    <Box w="full">
+                        <Text color="orange.600" fontWeight="medium" mb={2} _dark={{ color: 'orange.300' }}>
+                            Frequency:
+                        </Text>
+                        <Text>{insight.frequency}</Text>
+                    </Box>
+                )}
+
+                {insight.trend_direction && (
+                    <Box w="full">
+                        <Text color="blue.600" fontWeight="medium" mb={2} _dark={{ color: 'blue.300' }}>
+                            Trend Direction:
+                        </Text>
+                        <Badge
+                            colorScheme={
+                                insight.trend_direction.toLowerCase().includes('up') ? 'green' :
+                                    insight.trend_direction.toLowerCase().includes('down') ? 'red' :
+                                        'yellow'
+                            }
+                            px={2}
+                            py={1}
+                        >
+                            {insight.trend_direction}
+                        </Badge>
+                    </Box>
+                )}
+
+                {insight.implications && insight.implications.length > 0 && (
+                    <Box w="full">
+                        <Text color="red.600" fontWeight="medium" mb={2} _dark={{ color: 'red.300' }}>
+                            Implications:
+                        </Text>
+                        <VStack align="start" spacing={2}>
+                            {insight.implications.map((implication, index) => (
+                                <Text key={index}>{implication}</Text>
+                            ))}
+                        </VStack>
+                    </Box>
+                )}
+
+                {insight.supporting_data && insight.supporting_data.length > 0 && (
+                    <Box w="full">
+                        <Text color="teal.600" fontWeight="medium" mb={2} _dark={{ color: 'teal.300' }}>
+                            Supporting Data:
+                        </Text>
+                        <VStack align="start" spacing={2}>
+                            {insight.supporting_data.map((data, index) => (
+                                <Text key={index}>{data}</Text>
+                            ))}
+                        </VStack>
+                    </Box>
+                )}
+
+                {insight.source_url && (
+                    <Box w="full">
+                        <Text color="gray.600" fontWeight="medium" mb={2} _dark={{ color: 'gray.300' }}>
+                            Source:
+                        </Text>
+                        <Text>{insight.source_url}</Text>
+                    </Box>
+                )}
+
+                {insight.engagement_metrics && (
+                    <Box w="full">
+                        <Text color="teal.600" fontWeight="medium" mb={2} _dark={{ color: 'teal.300' }}>
+                            Engagement:
+                        </Text>
+                        <HStack spacing={4}>
+                            {typeof insight.engagement_metrics === 'string' ? (
+                                <Text>{insight.engagement_metrics}</Text>
+                            ) : (
+                                <>
+                                    <Badge colorScheme="blue">
+                                        {insight.engagement_metrics.upvotes} upvotes
+                                    </Badge>
+                                    <Badge colorScheme="purple">
+                                        {insight.engagement_metrics.comments} comments
+                                    </Badge>
+                                </>
+                            )}
+                        </HStack>
+                    </Box>
+                )}
+            </VStack>
+        </Box>
+    );
+
     return (
         <Container maxW="container.xl" py={8}>
             <VStack spacing={6} align="stretch">
@@ -148,92 +300,7 @@ export default function PatternDetectionDetail() {
                 {/* Content Section */}
                 {filteredInsights.length > 0 ? (
                     <VStack spacing={6} align="stretch">
-                        {filteredInsights.map((insight, index) => (
-                            <Box
-                                key={index}
-                                p={6}
-                                borderWidth="1px"
-                                borderRadius="lg"
-                                bg="white"
-                                _dark={{ bg: 'gray.700' }}
-                            >
-                                <VStack align="start" spacing={4}>
-                                    {insight.query && (
-                                        <Badge
-                                            display="block"
-                                            w="full"
-                                            bg="purple.100"
-                                            color="purple.800"
-                                            px={2}
-                                            py={2}
-                                            borderRadius="md"
-                                            mb={4}
-                                            _dark={{
-                                                bg: 'purple.900',
-                                                color: 'purple.100'
-                                            }}
-                                        >
-                                            QUERY: {insight.query.toUpperCase()}
-                                        </Badge>
-                                    )}
-
-                                    <Text fontSize="lg" fontWeight="medium" mb={2}>
-                                        {insight.title}
-                                    </Text>
-
-                                    <Box p={4} bg="gray.50" borderRadius="md" mb={4} w="full" _dark={{ bg: 'gray.800' }}>
-                                        <Text fontStyle="italic" color="gray.600" _dark={{ color: 'gray.400' }}>
-                                            {insight.evidence}
-                                        </Text>
-                                    </Box>
-
-                                    {insight.frequency && (
-                                        <Box w="full">
-                                            <Text color="green.600" fontWeight="medium" mb={2} _dark={{ color: 'green.300' }}>
-                                                Frequency:
-                                            </Text>
-                                            <Text>{insight.frequency}</Text>
-                                        </Box>
-                                    )}
-
-                                    {insight.correlation && (
-                                        <Box w="full">
-                                            <Text color="blue.600" fontWeight="medium" mb={2} _dark={{ color: 'blue.300' }}>
-                                                Correlation:
-                                            </Text>
-                                            <Text>{insight.correlation}</Text>
-                                        </Box>
-                                    )}
-
-                                    {insight.significance && (
-                                        <Box w="full">
-                                            <Text color="purple.600" fontWeight="medium" mb={2} _dark={{ color: 'purple.300' }}>
-                                                Significance:
-                                            </Text>
-                                            <Text>{insight.significance}</Text>
-                                        </Box>
-                                    )}
-
-                                    {insight.source_url && (
-                                        <Box w="full">
-                                            <Text color="orange.600" fontWeight="medium" mb={2} _dark={{ color: 'orange.300' }}>
-                                                Source:
-                                            </Text>
-                                            <Text>{insight.source_url}</Text>
-                                        </Box>
-                                    )}
-
-                                    {insight.engagement_metrics && (
-                                        <Box w="full">
-                                            <Text color="teal.600" fontWeight="medium" mb={2} _dark={{ color: 'teal.300' }}>
-                                                Engagement:
-                                            </Text>
-                                            <Text>{insight.engagement_metrics}</Text>
-                                        </Box>
-                                    )}
-                                </VStack>
-                            </Box>
-                        ))}
+                        {filteredInsights.map(renderInsight)}
                     </VStack>
                 ) : (
                     <Box
