@@ -132,15 +132,17 @@ export default function PainAnalysisDetail() {
                     <Badge
                         display="block"
                         w="full"
-                        bg="red.100"
-                        color="red.800"
+                        bg="orange.100"
+                        color="orange.800"
                         px={2}
                         py={2}
                         borderRadius="md"
                         mb={4}
+                        whiteSpace="normal"
+                        textAlign="left"
                         _dark={{
-                            bg: 'red.900',
-                            color: 'red.100'
+                            bg: 'orange.900',
+                            color: 'orange.100'
                         }}
                     >
                         QUERY: {insight.query.toUpperCase()}

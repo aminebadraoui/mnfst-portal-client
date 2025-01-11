@@ -116,6 +116,8 @@ export default function ProductAnalysisDetail() {
                         py={2}
                         borderRadius="md"
                         mb={4}
+                        whiteSpace="normal"
+                        textAlign="left"
                         _dark={{
                             bg: 'cyan.900',
                             color: 'cyan.100'

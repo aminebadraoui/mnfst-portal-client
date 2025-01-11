@@ -115,6 +115,8 @@ export default function PatternDetectionDetail() {
                         py={2}
                         borderRadius="md"
                         mb={4}
+                        whiteSpace="normal"
+                        textAlign="left"
                         _dark={{
                             bg: 'blue.900',
                             color: 'blue.100'

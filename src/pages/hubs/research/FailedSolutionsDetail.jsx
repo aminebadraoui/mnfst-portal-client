@@ -150,6 +150,8 @@ export default function FailedSolutionsDetail() {
                                             py={2}
                                             borderRadius="md"
                                             mb={4}
+                                            whiteSpace="normal"
+                                            textAlign="left"
                                             _dark={{
                                                 bg: 'red.900',
                                                 color: 'red.100'

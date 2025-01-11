@@ -115,6 +115,8 @@ export default function QuestionAdviceDetail() {
                         py={2}
                         borderRadius="md"
                         mb={4}
+                        whiteSpace="normal"
+                        textAlign="left"
                         _dark={{
                             bg: 'purple.900',
                             color: 'purple.100'

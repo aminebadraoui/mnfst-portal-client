@@ -36,66 +36,18 @@ export default function AvatarsDetail() {
     useEffect(() => {
         const fetchInsights = async () => {
             try {
-                const response = await api.get(`/research-hub/Avatars/project/${projectId}`);
-                const analysisData = response.data;
-
-                // Extract unique queries
-                const queries = [...new Set(analysisData.map(analysis => analysis.query))];
+                // First fetch available queries
+                const queriesResponse = await api.get(`/research-hub/project/${projectId}/queries`);
+                const queries = queriesResponse.data || [];
                 setAvailableQueries(queries);
 
-                // Transform the data
-                const extractedInsights = analysisData.flatMap(analysis => {
-                    if (analysis.insights && Array.isArray(analysis.insights)) {
-                        return analysis.insights.map(avatarInsight => {
-                            const { query, name, type, profiles } = avatarInsight;
-                            return {
-                                query,
-                                name,
-                                type,
-                                profiles: Array.isArray(profiles) ? profiles.map(profile => ({
-                                    // Basic Information
-                                    name: profile.name,
-                                    type: profile.type,
-                                    description: profile.description,
-                                    demographics: profile.demographics || {
-                                        age_range: '',
-                                        income_level: '',
-                                        location: '',
-                                        company_size: '',
-                                        industry: ''
-                                    },
-                                    market_size: profile.market_size,
+                // Then fetch insights for Avatars
+                const response = await api.get(`/research-hub/Avatars/project/${projectId}`);
+                console.log('Avatars response:', response.data);
 
-                                    // Buying Behavior
-                                    budget_range: profile.budget_range,
-                                    purchase_frequency: profile.purchase_frequency,
-                                    purchase_channels: profile.purchase_channels || [],
-                                    decision_makers: profile.decision_makers || [],
-                                    brand_preferences: profile.brand_preferences || [],
-
-                                    // Purchase Drivers
-                                    pain_points: profile.pain_points || [],
-                                    must_have_features: profile.must_have_features || [],
-                                    buying_criteria: profile.buying_criteria || [],
-                                    deal_breakers: profile.deal_breakers || [],
-                                    price_sensitivity: profile.price_sensitivity,
-
-                                    // Competitive Landscape
-                                    current_solutions: profile.current_solutions || [],
-                                    competitors: profile.competitors || [],
-                                    competitive_advantages: profile.competitive_advantages || [],
-                                    market_gaps: profile.market_gaps || [],
-                                    market_trends: profile.market_trends || [],
-
-                                    // Source Information
-                                    source_url: profile.source_url || '',
-                                    engagement: profile.engagement || { frequency: 1, representation: 10 }
-                                })) : []
-                            };
-                        });
-                    }
-                    return [];
-                });
+                // Extract insights from the response
+                const analysisData = response.data || [];
+                const extractedInsights = analysisData[0]?.insights || [];
 
                 console.log('Extracted insights:', extractedInsights);
                 setInsights(extractedInsights);
@@ -105,7 +57,7 @@ export default function AvatarsDetail() {
             } finally {
                 setIsLoading(false);
             }
-        }
+        };
 
         fetchInsights();
     }, [projectId]);
@@ -114,14 +66,33 @@ export default function AvatarsDetail() {
         ? insights.filter(insight => insight.query === selectedQuery)
         : insights;
 
-    const renderAvatarProfile = (profile) => {
+    const renderAvatarProfile = (profile, insight) => {
         return (
             <Box bg="white" rounded="lg" shadow="md" p={6} mb={6} _dark={{ bg: 'gray.800' }}>
-                {/* Basic Information */}
                 <VStack spacing={6} align="stretch">
+                    {insight.query && (
+                        <Badge
+                            display="block"
+                            w="full"
+                            bg="green.100"
+                            color="green.800"
+                            px={2}
+                            py={2}
+                            borderRadius="md"
+                            mb={4}
+                            whiteSpace="normal"
+                            textAlign="left"
+                            _dark={{
+                                bg: 'green.900',
+                                color: 'green.100'
+                            }}
+                        >
+                            QUERY: {insight.query.toUpperCase()}
+                        </Badge>
+                    )}
                     <Box>
                         <Heading as="h3" size="lg" mb={4}>{profile.name}</Heading>
-                        <Text fontWeight="bold" mb={2}>Type: {profile.type}</Text>
+                        <Text color="gray.600" mb={6} _dark={{ color: 'gray.400' }}>Type: {profile.type}</Text>
                         <Text mb={4}>{profile.description}</Text>
 
                         <Heading as="h4" size="md" mb={3}>Demographics</Heading>
@@ -313,52 +284,85 @@ export default function AvatarsDetail() {
     };
 
     return (
-        <div className="container mx-auto px-4 py-8">
-            <h2 className="text-3xl font-bold mb-8">Avatar Analysis</h2>
+        <Container maxW="container.xl" py={8}>
+            <VStack spacing={6} align="stretch">
+                {/* Header Section */}
+                <HStack spacing={4} align="center">
+                    <Button
+                        leftIcon={<FaArrowLeft />}
+                        variant="ghost"
+                        onClick={() => navigate(`/projects/${projectId}/research`)}
+                    >
+                        Back to Research Hub
+                    </Button>
+                    <Breadcrumb separator={<Icon as={FaChevronRight} color="gray.500" />}>
+                        <BreadcrumbItem>
+                            <BreadcrumbLink as={RouterLink} to={`/projects/${projectId}/research`}>
+                                Research Hub
+                            </BreadcrumbLink>
+                        </BreadcrumbItem>
+                        <BreadcrumbItem isCurrentPage>
+                            <BreadcrumbLink>Avatar Analysis</BreadcrumbLink>
+                        </BreadcrumbItem>
+                    </Breadcrumb>
+                </HStack>
 
-            {/* Query Selection */}
-            <div className="mb-8">
-                <label htmlFor="querySelect" className="block text-sm font-medium text-gray-700">
-                    Select Query:
-                </label>
-                <select
-                    id="querySelect"
-                    value={selectedQuery}
-                    onChange={(e) => setSelectedQuery(e.target.value)}
-                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-                >
-                    <option value="">All Queries</option>
-                    {availableQueries.map((query, index) => (
-                        <option key={index} value={query}>
-                            {query}
-                        </option>
-                    ))}
-                </select>
-            </div>
+                {/* Title Section */}
+                <Box>
+                    <HStack mb={2}>
+                        <Icon as={FaUser} color="green.500" boxSize={6} />
+                        <Heading>Avatar Analysis</Heading>
+                    </HStack>
+                    <Text color="gray.600" _dark={{ color: 'gray.400' }}>
+                        Analyze user personas and market segments
+                    </Text>
+                </Box>
 
-            {isLoading ? (
-                <div className="text-center">
-                    <p>Loading avatars...</p>
-                </div>
-            ) : error ? (
-                <div className="text-red-600">
-                    <p>Error: {error}</p>
-                </div>
-            ) : (
-                <div>
-                    {filteredInsights.map((insight, index) => (
-                        <div key={index} className="mb-12">
-                            <h3 className="text-2xl font-bold mb-6">{insight.name}</h3>
-                            <p className="text-gray-600 mb-6">Type: {insight.type}</p>
-                            {insight.profiles.map((profile, profileIndex) => (
-                                <div key={profileIndex}>
-                                    {renderAvatarProfile(profile)}
-                                </div>
+                {/* Query Filter */}
+                <Box w="full" bg="white" p={4} borderRadius="lg" boxShadow="sm" _dark={{ bg: 'gray.700' }}>
+                    <HStack spacing={4} align="center">
+                        <Text fontWeight="medium" minW="fit-content">Filter by Query:</Text>
+                        <Select
+                            value={selectedQuery}
+                            onChange={(e) => setSelectedQuery(e.target.value)}
+                            maxW="400px"
+                            placeholder="All Queries"
+                        >
+                            {availableQueries.map((query) => (
+                                <option key={query} value={query}>{query}</option>
                             ))}
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
+                        </Select>
+                    </HStack>
+                </Box>
+
+                {/* Content Section */}
+                {isLoading ? (
+                    <VStack spacing={6} align="center" justify="center" minH="400px">
+                        <Spinner size="xl" color="green.500" thickness="4px" />
+                        <Text>Loading avatars...</Text>
+                    </VStack>
+                ) : error ? (
+                    <VStack spacing={6} align="center" justify="center" minH="400px">
+                        <Icon as={FaUser} boxSize={10} color="red.500" />
+                        <Text color="red.500">Error: {error}</Text>
+                        <Button onClick={() => window.location.reload()}>
+                            Try Again
+                        </Button>
+                    </VStack>
+                ) : (
+                    <VStack spacing={6} align="stretch">
+                        {filteredInsights.map((insight, index) => (
+                            <Box key={index}>
+                                {insight.profiles.map((profile, profileIndex) => (
+                                    <Box key={profileIndex}>
+                                        {renderAvatarProfile(profile, insight)}
+                                    </Box>
+                                ))}
+                            </Box>
+                        ))}
+                    </VStack>
+                )}
+            </VStack>
+        </Container>
     );
 }
